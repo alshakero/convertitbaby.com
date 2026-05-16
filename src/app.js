@@ -1,6 +1,7 @@
 const state = {
   items: [],
-  urls: []
+  urls: [],
+  isConverting: false
 };
 
 const fileInput = document.querySelector("#file-input");
@@ -76,6 +77,13 @@ const OUTPUTS = {
     { label: "HTML", value: "html", kind: "document" },
     { label: "TXT", value: "txt", kind: "document" }
   ],
+  office: [
+    { label: "PDF", value: "pdf", kind: "office" },
+    { label: "HTML", value: "html", kind: "office" },
+    { label: "TXT", value: "txt", kind: "office" },
+    { label: "CSV", value: "csv", kind: "office" },
+    { label: "JSON", value: "json", kind: "office" }
+  ],
   data: [
     { label: "JSON", value: "json", kind: "data" },
     { label: "YAML", value: "yaml", kind: "data" },
@@ -88,7 +96,33 @@ const OUTPUTS = {
     { label: "JSON", value: "json", kind: "config" },
     { label: "YAML", value: "yaml", kind: "config" },
     { label: "TOML", value: "toml", kind: "config" },
-    { label: "INI", value: "ini", kind: "config" }
+    { label: "INI", value: "ini", kind: "config" },
+    { label: "XML", value: "xml", kind: "config" }
+  ],
+  email: [
+    { label: "TXT", value: "txt", kind: "email" },
+    { label: "HTML", value: "html", kind: "email" },
+    { label: "PDF", value: "pdf", kind: "email" },
+    { label: "MSG", value: "msg", kind: "email", requiresNativeEncoder: true }
+  ],
+  certificate: [
+    { label: "PEM", value: "pem", kind: "certificate" },
+    { label: "DER", value: "der", kind: "certificate" },
+    { label: "TXT", value: "txt", kind: "certificate" }
+  ],
+  playlist: [
+    { label: "JSON", value: "json", kind: "playlist" },
+    { label: "TXT", value: "txt", kind: "playlist" },
+    { label: "CSV", value: "csv", kind: "playlist" }
+  ],
+  palette: [
+    { label: "JSON", value: "json", kind: "palette" },
+    { label: "CSS", value: "css", kind: "palette" }
+  ],
+  workout: [
+    { label: "GPX", value: "gpx", kind: "workout" },
+    { label: "CSV", value: "csv", kind: "workout" },
+    { label: "FIT", value: "fit", kind: "workout", requiresNativeEncoder: true }
   ],
   subtitle: [
     { label: "SRT", value: "srt", kind: "subtitle" },
@@ -129,6 +163,9 @@ const OUTPUTS = {
     { label: "Pretty", value: "pretty", kind: "code" },
     { label: "Minified", value: "min", kind: "code" }
   ],
+  rawImage: [
+    { label: "Original", value: "original", kind: "copy" }
+  ],
   unknown: []
 };
 
@@ -152,6 +189,7 @@ dropzone.addEventListener("drop", (event) => addFiles(event.dataTransfer.files))
 goButton.addEventListener("click", convertAll);
 clearButton.addEventListener("click", clearQueue);
 downloadAllButton.addEventListener("click", downloadAll);
+window.addEventListener("beforeunload", warnBeforeLeavingDuringConversion);
 
 function addFiles(fileList) {
   const newItems = [...fileList].map((file) => {
@@ -178,7 +216,7 @@ function addFiles(fileList) {
 function renderQueue() {
   queueEl.replaceChildren();
   emptyQueueEl.hidden = state.items.length > 0;
-  goButton.disabled = !state.items.some((item) => getSelectedOutput(item));
+  goButton.disabled = state.isConverting || !state.items.some((item) => getSelectedOutput(item));
   clearButton.disabled = state.items.length === 0;
   downloadAllButton.disabled = getAllDownloads().length === 0;
 
@@ -246,6 +284,8 @@ function renderQueue() {
 }
 
 async function convertAll() {
+  if (state.isConverting) return;
+
   clearDownloads();
   const convertible = state.items.filter((item) => getSelectedOutput(item));
   if (!convertible.length) {
@@ -253,35 +293,41 @@ async function convertAll() {
     return;
   }
 
-  goButton.disabled = true;
+  setConversionActive(true);
   setProgress(0);
   setStatus(`Converting ${convertible.length} file${convertible.length === 1 ? "" : "s"}...`);
   let completed = 0;
 
-  const results = await Promise.allSettled(convertible.map(async (item) => {
-    item.status = "Converting";
-    revokeItemDownloads(item);
+  try {
     renderQueue();
-    const output = getSelectedOutput(item);
-    const downloads = await convertQueueItem(item.file, output);
-    item.downloads = downloads.map((download) => createDownload(download.blob, download.filename, download.mimeType));
-    item.status = "Done";
-    completed += 1;
-    setProgress(completed / convertible.length);
+
+    const results = await Promise.allSettled(convertible.map(async (item) => {
+      item.status = "Converting";
+      revokeItemDownloads(item);
+      renderQueue();
+      const output = getSelectedOutput(item);
+      const downloads = await convertQueueItem(item.file, output);
+      item.downloads = downloads.map((download) => createDownload(download.blob, download.filename, download.mimeType));
+      item.status = "Done";
+      completed += 1;
+      setProgress(completed / convertible.length);
+      renderQueue();
+    }));
+
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        const item = convertible[index];
+        item.status = result.reason?.message || "Failed";
+      }
+    });
+
+    const failed = results.filter((result) => result.status === "rejected").length;
+    setProgress(1);
+    setStatus(failed ? `${convertible.length - failed} done, ${failed} failed.` : `Converted ${convertible.length} file${convertible.length === 1 ? "" : "s"}.`);
+  } finally {
+    setConversionActive(false);
     renderQueue();
-  }));
-
-  results.forEach((result, index) => {
-    if (result.status === "rejected") {
-      const item = convertible[index];
-      item.status = result.reason?.message || "Failed";
-    }
-  });
-
-  renderQueue();
-  const failed = results.filter((result) => result.status === "rejected").length;
-  setProgress(1);
-  setStatus(failed ? `${convertible.length - failed} done, ${failed} failed.` : `Converted ${convertible.length} file${convertible.length === 1 ? "" : "s"}.`);
+  }
 }
 
 async function downloadAll() {
@@ -292,15 +338,19 @@ async function downloadAll() {
   setStatus(`Preparing ${downloads.length} file${downloads.length === 1 ? "" : "s"} for download...`);
 
   try {
+    if (downloads.length === 1) {
+      triggerDownload(downloads[0]);
+      setStatus(`Downloaded ${downloads[0].filename}.`);
+      return;
+    }
+
     const zipBlob = await createZip(downloads);
     const url = URL.createObjectURL(zipBlob);
     state.urls.push(url);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `convertitbaby-${new Date().toISOString().slice(0, 10)}.zip`;
-    document.body.append(link);
-    link.click();
-    link.remove();
+    triggerDownload({
+      url,
+      filename: `convertitbaby-${new Date().toISOString().slice(0, 10)}.zip`
+    });
     setStatus(`Downloaded ${downloads.length} file${downloads.length === 1 ? "" : "s"} as a ZIP.`);
   } catch (error) {
     console.error(error);
@@ -339,10 +389,22 @@ async function convertQueueItem(file, output) {
       return [await convertArchiveFile(file, output.value)];
     case "document":
       return [await convertDocumentFile(file, output.value)];
+    case "office":
+      return [await convertOfficeFile(file, output.value)];
     case "data":
       return [await convertDataFile(file, output.value)];
     case "config":
       return [await convertConfigFile(file, output.value)];
+    case "email":
+      return [await convertEmailFile(file, output.value)];
+    case "certificate":
+      return [await convertCertificateFile(file, output.value)];
+    case "playlist":
+      return [await convertPlaylistFile(file, output.value)];
+    case "palette":
+      return [await convertPaletteFile(file, output.value)];
+    case "workout":
+      return [await convertWorkoutFile(file, output.value)];
     case "subtitle":
       return [await convertSubtitleFile(file, output.value)];
     case "geo":
@@ -359,6 +421,8 @@ async function convertQueueItem(file, output) {
       return [await convertModelFile(file, output.value)];
     case "code":
       return [await convertCodeFile(file, output.value)];
+    case "copy":
+      return [copyOriginalFile(file, extension(file.name))];
     default:
       throw new Error("Unsupported output.");
   }
@@ -377,6 +441,75 @@ async function convertDocumentFile(file, outputValue) {
     return textToPdfDownload(text, rename(file.name, "pdf"));
   }
   throw new Error("That document output is not available for this file.");
+}
+
+async function convertOfficeFile(file, outputValue) {
+  const ext = extension(file.name);
+  if (["ods", "xlsx"].includes(ext)) {
+    const rows = ext === "xlsx" ? await parseXlsx(file) : await parseOds(file);
+    if (outputValue === "json") return textDownload(`${JSON.stringify(rows, null, 2)}\n`, rename(file.name, "json"), mimeForExtension("json"));
+    if (outputValue === "csv") return textDownload(arrayToDelimited(normalizeRows(rows), ","), rename(file.name, "csv"), mimeForExtension("csv"));
+  }
+  const text = await officeToText(file);
+  if (outputValue === "txt") return textDownload(text, rename(file.name, "txt"), "text/plain");
+  if (outputValue === "html") return textDownload(textToHtml(text), rename(file.name, "html"), "text/html");
+  if (outputValue === "pdf") return textToPdfDownload(text, rename(file.name, "pdf"));
+  throw new Error("That office output is not available for this file.");
+}
+
+async function convertEmailFile(file, outputValue) {
+  if (outputValue === "msg") return convertCopyOnlyFormat(file, "msg", "email");
+  const email = extension(file.name) === "eml" ? parseEml(await file.text()) : { subject: file.name, body: "" };
+  const text = `Subject: ${email.subject}\nFrom: ${email.from}\nTo: ${email.to}\n\n${email.body}`;
+  if (outputValue === "txt") return textDownload(text, rename(file.name, "txt"), "text/plain");
+  if (outputValue === "html") return textDownload(email.html || textToHtml(text), rename(file.name, "html"), "text/html");
+  if (outputValue === "pdf") return textToPdfDownload(text, rename(file.name, "pdf"));
+  throw new Error("That email output is not available for this file.");
+}
+
+async function convertCertificateFile(file, outputValue) {
+  const ext = extension(file.name);
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const text = new TextDecoder().decode(bytes);
+  const isPem = /-----BEGIN [^-]+-----/.test(text);
+  const isDer = ["der", "cer"].includes(ext) || !isPem;
+  if (outputValue === "txt") return textDownload(certificateSummary(file.name, text, bytes), rename(file.name, "txt"), "text/plain");
+  if (outputValue === "pem") return textDownload(isDer ? derToPem(bytes, "CERTIFICATE") : text, rename(file.name, "pem"), mimeForExtension("pem"));
+  if (outputValue === "der") {
+    return {
+      blob: new Blob([isDer ? bytes : pemToDer(text)], { type: mimeForExtension("der") }),
+      filename: rename(file.name, "der"),
+      mimeType: mimeForExtension("der")
+    };
+  }
+  throw new Error("That certificate output is not available for this file.");
+}
+
+async function convertPlaylistFile(file, outputValue) {
+  const rows = parsePlaylist(await file.text(), extension(file.name));
+  if (outputValue === "json") return textDownload(`${JSON.stringify(rows, null, 2)}\n`, rename(file.name, "json"), mimeForExtension("json"));
+  if (outputValue === "csv") return textDownload(arrayToDelimited(rows, ","), rename(file.name, "csv"), mimeForExtension("csv"));
+  if (outputValue === "txt") return textDownload(rows.map((row) => row.path || row.title).join("\n"), rename(file.name, "txt"), "text/plain");
+  throw new Error("That playlist output is not available for this file.");
+}
+
+async function convertPaletteFile(file, outputValue) {
+  const colors = await parsePalette(file);
+  if (outputValue === "json") return textDownload(`${JSON.stringify(colors, null, 2)}\n`, rename(file.name, "json"), mimeForExtension("json"));
+  if (outputValue === "css") {
+    return textDownload(`:root {\n${colors.map((color, index) => `  --color-${index + 1}: ${color.hex};`).join("\n")}\n}\n`, rename(file.name, "css"), mimeForExtension("css"));
+  }
+  throw new Error("That palette output is not available for this file.");
+}
+
+async function convertWorkoutFile(file, outputValue) {
+  if (outputValue === "fit") return convertCopyOnlyFormat(file, "fit", "workout");
+  const points = parseWorkout(await file.text(), extension(file.name));
+  if (outputValue === "csv") return textDownload(arrayToDelimited(points, ","), rename(file.name, "csv"), mimeForExtension("csv"));
+  if (outputValue === "gpx") {
+    return textDownload(geoToGpx(points.map((point, index) => ({ name: point.name || `Point ${index + 1}`, coordinates: [point.longitude, point.latitude] }))), rename(file.name, "gpx"), mimeForExtension("gpx"));
+  }
+  throw new Error("That workout output is not available for this file.");
 }
 
 async function convertEbookFile(file, outputValue) {
@@ -1159,6 +1292,8 @@ function parseConfigText(text, ext) {
   if (["yaml", "yml"].includes(ext)) return parseSimpleYaml(text);
   if (ext === "toml") return parseToml(text);
   if (ext === "ini") return parseIni(text);
+  if (ext === "properties") return parseProperties(text);
+  if (ext === "plist") return parsePlist(text);
   throw new Error("That config file could not be read.");
 }
 
@@ -1167,7 +1302,162 @@ function serializeConfig(value, ext) {
   if (ext === "yaml") return objectToYaml(value);
   if (ext === "toml") return objectToToml(value);
   if (ext === "ini") return objectToIni(value);
+  if (ext === "xml") return objectToXml(value);
   throw new Error("That config output is not available for this file.");
+}
+
+async function officeToText(file) {
+  const ext = extension(file.name);
+  if (ext === "pptx") {
+    const entries = await unzipEntries(file);
+    return [...entries].filter(([name]) => /^ppt\/slides\/slide\d+\.xml$/.test(name)).map(([, bytes]) => xmlToPlainText(new TextDecoder().decode(bytes))).join("\n\n");
+  }
+  if (["odt", "odp"].includes(ext)) {
+    const entries = await unzipEntries(file);
+    const content = entries.get("content.xml");
+    if (!content) throw new Error("That office file could not be read.");
+    return htmlToText(new TextDecoder().decode(content).replace(/<text:p/g, "<p").replace(/<\/text:p>/g, "</p>"));
+  }
+  return file.text();
+}
+
+async function parseOds(file) {
+  const entries = await unzipEntries(file);
+  const content = entries.get("content.xml");
+  if (!content) throw new Error("That spreadsheet could not be read.");
+  const xml = new TextDecoder().decode(content);
+  const rows = [...xml.matchAll(/<table:table-row[\s\S]*?>([\s\S]*?)<\/table:table-row>/g)].map((row) => [...row[1].matchAll(/<text:p[^>]*>([\s\S]*?)<\/text:p>/g)].map((cell) => decodeXml(cell[1].replace(/<[^>]+>/g, ""))));
+  const headers = rows.shift() || [];
+  return rows.map((row) => Object.fromEntries(headers.map((header, index) => [header || `column${index + 1}`, row[index] || ""])));
+}
+
+function parseEml(text) {
+  const [rawHeaders, ...bodyParts] = text.split(/\r?\n\r?\n/);
+  const headers = Object.fromEntries(rawHeaders.split(/\r?\n/).map((line) => {
+    const [key, ...rest] = line.split(":");
+    return [key.toLowerCase(), rest.join(":").trim()];
+  }));
+  const body = bodyParts.join("\n\n").trim();
+  return { subject: headers.subject || "", from: headers.from || "", to: headers.to || "", body, html: /<html|<body|<p[>\s]/i.test(body) ? body : "" };
+}
+
+function certificateSummary(filename, text, bytes) {
+  return `${filename}\nSize: ${bytes.length} bytes\nFormat: ${text.includes("-----BEGIN") ? "PEM" : "DER"}\n`;
+}
+
+function pemToDer(text) {
+  const base64 = text.replace(/-----BEGIN [^-]+-----|-----END [^-]+-----|\s/g, "");
+  return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+}
+
+function derToPem(bytes, label) {
+  const base64 = btoa(String.fromCharCode(...bytes));
+  return `-----BEGIN ${label}-----\n${base64.match(/.{1,64}/g).join("\n")}\n-----END ${label}-----\n`;
+}
+
+function parsePlaylist(text, ext) {
+  if (["m3u", "m3u8"].includes(ext)) {
+    return text.split(/\r?\n/).filter((line) => line && !line.startsWith("#")).map((line, index) => ({ index: index + 1, path: line }));
+  }
+  if (ext === "pls") {
+    const result = [];
+    for (const match of text.matchAll(/^File(\d+)=(.*)$/gim)) result.push({ index: Number(match[1]), path: match[2] });
+    return result;
+  }
+  if (ext === "cue") {
+    return [...text.matchAll(/TRACK\s+(\d+)[\s\S]*?TITLE\s+"([^"]+)"/g)].map((match) => ({ index: Number(match[1]), title: match[2] }));
+  }
+  return [];
+}
+
+async function parsePalette(file) {
+  const ext = extension(file.name);
+  if (ext === "gpl") {
+    return (await file.text()).split(/\r?\n/).map((line) => line.trim().match(/^(\d+)\s+(\d+)\s+(\d+)\s*(.*)$/)).filter(Boolean).map((match) => rgbColor(match[1], match[2], match[3], match[4] || "Color"));
+  }
+  if (ext === "ase") return parseAse(new Uint8Array(await file.arrayBuffer()));
+  const canvas = await imageFileToCanvas(file);
+  const data = canvas.getContext("2d").getImageData(0, 0, Math.min(canvas.width, 8), Math.min(canvas.height, 8)).data;
+  const seen = new Map();
+  for (let index = 0; index < data.length && seen.size < 8; index += 4) {
+    const color = rgbColor(data[index], data[index + 1], data[index + 2], `Color ${seen.size + 1}`);
+    seen.set(color.hex, color);
+  }
+  return [...seen.values()];
+}
+
+function parseAse(bytes) {
+  if (new TextDecoder().decode(bytes.slice(0, 4)) !== "ASEF") throw new Error("That ASE file could not be read.");
+  let offset = 12;
+  const colors = [];
+  while (offset + 6 < bytes.length) {
+    const type = readUint16BE(bytes, offset);
+    const length = readUint32BE(bytes, offset + 2);
+    offset += 6;
+    if (type === 1) {
+      const nameLength = readUint16BE(bytes, offset);
+      const name = new TextDecoder("utf-16be").decode(bytes.slice(offset + 2, offset + 2 + (nameLength - 1) * 2));
+      const modelOffset = offset + 2 + nameLength * 2;
+      const model = new TextDecoder().decode(bytes.slice(modelOffset, modelOffset + 4));
+      if (model === "RGB ") {
+        colors.push(rgbColor(bytes[modelOffset + 4] * 255, bytes[modelOffset + 8] * 255, bytes[modelOffset + 12] * 255, name));
+      }
+    }
+    offset += length;
+  }
+  return colors.length ? colors : [rgbColor(0, 0, 0, "Color")];
+}
+
+function rgbColor(r, g, b, name) {
+  const values = [r, g, b].map((value) => Math.max(0, Math.min(255, Math.round(Number(value)))));
+  return { name: String(name).trim(), hex: `#${values.map((value) => value.toString(16).padStart(2, "0")).join("")}`, r: values[0], g: values[1], b: values[2] };
+}
+
+function parseWorkout(text, ext) {
+  if (ext === "tcx") {
+    const doc = new DOMParser().parseFromString(text, "application/xml");
+    return [...doc.querySelectorAll("Trackpoint")].map((point, index) => ({ name: `Point ${index + 1}`, latitude: Number(point.querySelector("LatitudeDegrees")?.textContent || 0), longitude: Number(point.querySelector("LongitudeDegrees")?.textContent || 0) }));
+  }
+  if (ext === "nmea") {
+    return text.split(/\r?\n/).filter((line) => line.includes("GPRMC")).map((line, index) => nmeaPoint(line, index + 1)).filter(Boolean);
+  }
+  return [];
+}
+
+function nmeaPoint(line, index) {
+  const parts = line.split(",");
+  if (parts.length < 7) return null;
+  return { name: `Point ${index}`, latitude: nmeaCoord(parts[3], parts[4]), longitude: nmeaCoord(parts[5], parts[6]) };
+}
+
+function nmeaCoord(value, direction) {
+  const raw = Number(value);
+  const degrees = Math.floor(raw / 100);
+  const minutes = raw - degrees * 100;
+  const result = degrees + minutes / 60;
+  return ["S", "W"].includes(direction) ? -result : result;
+}
+
+function parseProperties(text) {
+  const result = {};
+  for (const line of text.split(/\r?\n/)) {
+    if (!line || /^[#!]/.test(line)) continue;
+    const [key, ...rest] = line.split(/[=:]/);
+    result[key.trim()] = rest.join("=").trim();
+  }
+  return result;
+}
+
+function parsePlist(text) {
+  const doc = new DOMParser().parseFromString(text, "application/xml");
+  const dict = doc.querySelector("dict");
+  const result = {};
+  if (!dict) return result;
+  const children = [...dict.children];
+  for (let index = 0; index < children.length; index += 2) {
+    result[children[index].textContent] = children[index + 1]?.textContent || "";
+  }
+  return result;
 }
 
 function parseToml(text) {
@@ -1471,6 +1761,14 @@ function readUint32(bytes, offset) {
   return new DataView(bytes.buffer, bytes.byteOffset + offset, 4).getUint32(0, true);
 }
 
+function readUint16BE(bytes, offset) {
+  return new DataView(bytes.buffer, bytes.byteOffset + offset, 2).getUint16(0, false);
+}
+
+function readUint32BE(bytes, offset) {
+  return new DataView(bytes.buffer, bytes.byteOffset + offset, 4).getUint32(0, false);
+}
+
 function escapeHtml(value) {
   return value.replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
 }
@@ -1515,8 +1813,33 @@ function getOutputOptions(item) {
 }
 
 function getDisabledReason(output, item) {
+  const ext = extension(item.file.name);
   if (output.kind === "image" && output.value === "image/avif" && !canCreateImageMime("image/avif")) {
     return "AVIF is not available for this file.";
+  }
+
+  if (output.kind === "office" && ["ods", "xlsx"].includes(ext) && !["csv", "json"].includes(output.value)) {
+    return `${output.label} is not available for this file.`;
+  }
+
+  if (output.kind === "office" && !["ods", "xlsx"].includes(ext) && ["csv", "json"].includes(output.value)) {
+    return `${output.label} is not available for this file.`;
+  }
+
+  if (output.kind === "email" && ext === "msg" && output.value !== "msg") {
+    return `${output.label} is not available for this file.`;
+  }
+
+  if (output.kind === "email" && ext !== "msg" && output.value === "msg") {
+    return `${output.label} is not available for this file.`;
+  }
+
+  if (output.kind === "workout" && ext === "fit" && output.value !== "fit") {
+    return `${output.label} is not available for this file.`;
+  }
+
+  if (output.kind === "workout" && ext !== "fit" && output.value === "fit") {
+    return `${output.label} is not available for this file.`;
   }
 
   if (["font", "ebook"].includes(output.kind) && output.requiresNativeEncoder && extension(item.file.name) !== output.value) {
@@ -1625,6 +1948,8 @@ function mimeForExtension(ext) {
     yml: "application/yaml",
     toml: "application/toml",
     ini: "text/plain",
+    properties: "text/plain",
+    plist: "application/x-plist",
     csv: "text/csv",
     tsv: "text/tab-separated-values",
     xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1636,6 +1961,31 @@ function mimeForExtension(ext) {
     geojson: "application/geo+json",
     kml: "application/vnd.google-earth.kml+xml",
     gpx: "application/gpx+xml",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ods: "application/vnd.oasis.opendocument.spreadsheet",
+    odt: "application/vnd.oasis.opendocument.text",
+    odp: "application/vnd.oasis.opendocument.presentation",
+    eml: "message/rfc822",
+    msg: "application/vnd.ms-outlook",
+    pem: "application/x-pem-file",
+    der: "application/pkix-cert",
+    crt: "application/x-x509-ca-cert",
+    cer: "application/pkix-cert",
+    m3u: "audio/x-mpegurl",
+    m3u8: "application/vnd.apple.mpegurl",
+    pls: "audio/x-scpls",
+    cue: "application/x-cue",
+    gpl: "text/plain",
+    ase: "application/octet-stream",
+    tcx: "application/xml",
+    nmea: "text/plain",
+    fit: "application/octet-stream",
+    jxl: "image/jxl",
+    psd: "image/vnd.adobe.photoshop",
+    dng: "image/x-adobe-dng",
+    cr2: "image/x-canon-cr2",
+    nef: "image/x-nikon-nef",
+    arw: "image/x-sony-arw",
     env: "text/plain",
     svg: "image/svg+xml",
     ico: "image/x-icon",
@@ -1653,6 +2003,9 @@ function mimeForExtension(ext) {
     glb: "model/gltf-binary",
     css: "text/css",
     js: "text/javascript",
+    sql: "application/sql",
+    graphql: "application/graphql",
+    proto: "text/plain",
     mp3: "audio/mpeg",
     wav: "audio/wav",
     aac: "audio/aac",
@@ -1669,16 +2022,23 @@ function mimeForExtension(ext) {
 
 function inferFileKind(file) {
   const ext = extension(file.name);
+  if (["jxl", "psd", "dng", "cr2", "nef", "arw"].includes(ext)) return "rawImage";
+  if (file.name.includes(".palette.") || ["gpl", "ase"].includes(ext)) return "palette";
+  if (["pptx", "ods", "odt", "odp"].includes(ext)) return "office";
+  if (["eml", "msg"].includes(ext)) return "email";
+  if (["pem", "der", "crt", "cer"].includes(ext)) return "certificate";
+  if (["m3u", "m3u8", "pls", "cue"].includes(ext)) return "playlist";
+  if (["fit", "tcx", "nmea"].includes(ext)) return "workout";
   if (["srt", "vtt"].includes(ext)) return "subtitle";
   if (["geojson", "kml", "gpx"].includes(ext)) return "geo";
-  if (["toml", "ini"].includes(ext)) return "config";
+  if (["toml", "ini", "properties", "plist"].includes(ext)) return "config";
   if (["json", "yaml", "yml", "csv", "tsv", "xml", "vcf", "ics", "env", "xlsx"].includes(ext)) return "data";
   if (["docx", "txt", "md", "markdown", "html", "htm"].includes(ext)) return "document";
   if (["epub", "mobi", "azw3"].includes(ext)) return "ebook";
   if (ext === "svg") return "vector";
   if (["ttf", "otf", "woff", "woff2"].includes(ext)) return "font";
   if (["obj", "stl", "gltf", "glb"].includes(ext)) return "model3d";
-  if (["css", "js"].includes(ext)) return "code";
+  if (["css", "js", "sql", "graphql", "proto"].includes(ext)) return "code";
   if (isArchiveExtension(ext)) return "archive";
   if (isArchiveMime(file.type)) return "archive";
   if (["heic", "heif"].includes(ext) || /hei[cf]/i.test(file.type)) return "heic";
@@ -1695,8 +2055,15 @@ function fileKindLabel(kind) {
   return ({
     archive: "Archive",
     document: "Document",
+    office: "Office",
     data: "Data",
     config: "Config",
+    email: "Email",
+    certificate: "Certificate",
+    playlist: "Playlist",
+    palette: "Palette",
+    workout: "Workout",
+    rawImage: "Specialized image",
     subtitle: "Subtitles",
     geo: "Map data",
     ebook: "Ebook",
@@ -1923,6 +2290,15 @@ function createDownloadLink(download) {
   link.type = download.mimeType;
   link.textContent = `${download.filename} (${formatBytes(download.size)})`;
   return link;
+}
+
+function triggerDownload(download) {
+  const link = document.createElement("a");
+  link.href = download.url;
+  link.download = download.filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
 }
 
 function revokeItemDownloads(item) {
@@ -2161,6 +2537,17 @@ function canvasToBlob(canvas, type, quality) {
 
 function setStatus(message) {
   statusEl.textContent = message;
+}
+
+function setConversionActive(isConverting) {
+  state.isConverting = isConverting;
+}
+
+function warnBeforeLeavingDuringConversion(event) {
+  if (!state.isConverting) return;
+
+  event.preventDefault();
+  event.returnValue = "";
 }
 
 function setProgress(value) {

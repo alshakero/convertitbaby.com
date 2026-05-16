@@ -407,6 +407,192 @@
       "path": "geo/gpx/sample.gpx",
       "kind": "geo",
       "source": "Synthetic GPX fixture"
+    },
+    {
+      "id": "pptx",
+      "path": "office/pptx/sample.pptx",
+      "kind": "office",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "odt",
+      "path": "office/odt/sample.odt",
+      "kind": "office",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "odp",
+      "path": "office/odp/sample.odp",
+      "kind": "office",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "ods",
+      "path": "office/ods/sample.ods",
+      "kind": "office",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "eml",
+      "path": "email/eml/sample.eml",
+      "kind": "email",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "msg",
+      "path": "email/msg/sample.msg",
+      "kind": "email",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "sql",
+      "path": "code/sql/sample.sql",
+      "kind": "code",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "graphql",
+      "path": "code/graphql/sample.graphql",
+      "kind": "code",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "proto",
+      "path": "code/proto/sample.proto",
+      "kind": "code",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "properties",
+      "path": "config/properties/sample.properties",
+      "kind": "config",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "plist",
+      "path": "config/plist/sample.plist",
+      "kind": "config",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "pem",
+      "path": "certificate/pem/sample.pem",
+      "kind": "certificate",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "der",
+      "path": "certificate/der/sample.der",
+      "kind": "certificate",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "crt",
+      "path": "certificate/crt/sample.crt",
+      "kind": "certificate",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "cer",
+      "path": "certificate/cer/sample.cer",
+      "kind": "certificate",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "m3u",
+      "path": "playlist/m3u/sample.m3u",
+      "kind": "playlist",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "m3u8",
+      "path": "playlist/m3u8/sample.m3u8",
+      "kind": "playlist",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "pls",
+      "path": "playlist/pls/sample.pls",
+      "kind": "playlist",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "cue",
+      "path": "playlist/cue/sample.cue",
+      "kind": "playlist",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "gpl",
+      "path": "palette/gpl/sample.gpl",
+      "kind": "palette",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "ase",
+      "path": "palette/ase/sample.ase",
+      "kind": "palette",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "palette-png",
+      "path": "palette/png/sample.palette.png",
+      "kind": "palette",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "tcx",
+      "path": "workout/tcx/sample.tcx",
+      "kind": "workout",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "nmea",
+      "path": "workout/nmea/sample.nmea",
+      "kind": "workout",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "fit",
+      "path": "workout/fit/sample.fit",
+      "kind": "workout",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "jxl",
+      "path": "raw/jxl/sample.jxl",
+      "kind": "rawImage",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "psd",
+      "path": "raw/psd/sample.psd",
+      "kind": "rawImage",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "dng",
+      "path": "raw/dng/sample.dng",
+      "kind": "rawImage",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "cr2",
+      "path": "raw/cr2/sample.cr2",
+      "kind": "rawImage",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "nef",
+      "path": "raw/nef/sample.nef",
+      "kind": "rawImage",
+      "source": "Synthetic compact fixture"
+    },
+    {
+      "id": "arw",
+      "path": "raw/arw/sample.arw",
+      "kind": "rawImage",
+      "source": "Synthetic compact fixture"
     }
   ]
 }

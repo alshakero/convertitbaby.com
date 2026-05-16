@@ -46,6 +46,8 @@ This directory contains one compact fixture for every source extension the app c
 - `data/xlsx`
 - `config/toml`
 - `config/ini`
+- `config/properties`
+- `config/plist`
 - `subtitle/srt`
 - `subtitle/vtt`
 - `geo/geojson`
@@ -65,11 +67,40 @@ This directory contains one compact fixture for every source extension the app c
 - `model/glb`
 - `code/css`
 - `code/js`
+- `code/sql`
+- `code/graphql`
+- `code/proto`
 - `video/mp4`
 - `video/mov`
 - `video/mkv`
 - `video/webm`
 - `video/ts`
+- `office/pptx`
+- `office/odt`
+- `office/odp`
+- `office/ods`
+- `email/eml`
+- `email/msg`
+- `certificate/pem`
+- `certificate/der`
+- `certificate/crt`
+- `certificate/cer`
+- `playlist/m3u`
+- `playlist/m3u8`
+- `playlist/pls`
+- `playlist/cue`
+- `palette/gpl`
+- `palette/ase`
+- `palette/png`
+- `workout/tcx`
+- `workout/nmea`
+- `workout/fit`
+- `raw/jxl`
+- `raw/psd`
+- `raw/dng`
+- `raw/cr2`
+- `raw/nef`
+- `raw/arw`
 
 The fixtures are intentionally tiny so the full conversion matrix can run in a real browser without turning routine checks into a media-rendering marathon.
 
@@ -82,6 +113,7 @@ The fixtures are intentionally tiny so the full conversion matrix can run in a r
 - AAC, FLAC, Ogg, and M4A were derived locally from the MP3 seed with FFmpeg.
 - MOV, MKV, and TS were derived locally from the MP4 and MP3 seeds with FFmpeg.
 - Archive fixtures are tiny synthetic files used to verify extension recognition and local container generation.
-- DOCX, EPUB, GLB, OBJ, STL, SVG, document, data, and code fixtures are compact valid files generated locally for the conversion matrix.
-- XLSX, SRT, VTT, TOML, INI, GeoJSON, KML, and GPX fixtures are compact valid files generated locally for the conversion matrix.
+- DOCX, PPTX, ODT, ODP, ODS, EPUB, GLB, OBJ, STL, SVG, document, data, email, certificate, playlist, palette, workout, and code fixtures are compact valid files generated locally for the conversion matrix.
+- XLSX, SRT, VTT, TOML, INI, properties, plist, GeoJSON, KML, GPX, TCX, and NMEA fixtures are compact valid files generated locally for the conversion matrix.
+- JXL, PSD, DNG, CR2, NEF, ARW, MSG, FIT, and ASE fixtures are compact format-recognition files used for same-format or parser smoke checks.
 - TTF and OTF fixtures are copied from local system fonts. WOFF and WOFF2 fixtures are compact format-recognition files used only for same-format copy checks.

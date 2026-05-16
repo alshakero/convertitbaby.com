@@ -65,6 +65,13 @@ const outputsByKind = {
     { label: "HTML", value: "html", extension: ".html" },
     { label: "TXT", value: "txt", extension: ".txt" }
   ],
+  office: [
+    { label: "PDF", value: "pdf", extension: ".pdf" },
+    { label: "HTML", value: "html", extension: ".html" },
+    { label: "TXT", value: "txt", extension: ".txt" },
+    { label: "CSV", value: "csv", extension: ".csv" },
+    { label: "JSON", value: "json", extension: ".json" }
+  ],
   data: [
     { label: "JSON", value: "json", extension: ".json" },
     { label: "YAML", value: "yaml", extension: ".yaml" },
@@ -77,7 +84,33 @@ const outputsByKind = {
     { label: "JSON", value: "json", extension: ".json" },
     { label: "YAML", value: "yaml", extension: ".yaml" },
     { label: "TOML", value: "toml", extension: ".toml" },
-    { label: "INI", value: "ini", extension: ".ini" }
+    { label: "INI", value: "ini", extension: ".ini" },
+    { label: "XML", value: "xml", extension: ".xml" }
+  ],
+  email: [
+    { label: "TXT", value: "txt", extension: ".txt" },
+    { label: "HTML", value: "html", extension: ".html" },
+    { label: "PDF", value: "pdf", extension: ".pdf" },
+    { label: "MSG", value: "msg", extension: ".msg" }
+  ],
+  certificate: [
+    { label: "PEM", value: "pem", extension: ".pem" },
+    { label: "DER", value: "der", extension: ".der" },
+    { label: "TXT", value: "txt", extension: ".txt" }
+  ],
+  playlist: [
+    { label: "JSON", value: "json", extension: ".json" },
+    { label: "TXT", value: "txt", extension: ".txt" },
+    { label: "CSV", value: "csv", extension: ".csv" }
+  ],
+  palette: [
+    { label: "JSON", value: "json", extension: ".json" },
+    { label: "CSS", value: "css", extension: ".css" }
+  ],
+  workout: [
+    { label: "GPX", value: "gpx", extension: ".gpx" },
+    { label: "CSV", value: "csv", extension: ".csv" },
+    { label: "FIT", value: "fit", extension: ".fit" }
   ],
   subtitle: [
     { label: "SRT", value: "srt", extension: ".srt" },
@@ -117,8 +150,30 @@ const outputsByKind = {
   code: [
     { label: "Pretty", value: "pretty", extension: null },
     { label: "Minified", value: "min", extension: null }
+  ],
+  rawImage: [
+    { label: "Original", value: "original", extension: null }
   ]
 };
+
+test("download all keeps a single converted file unzipped", async ({ page }) => {
+  await page.goto("/");
+  await page.setInputFiles("#file-input", path.join(fixtureRoot, "image/png/sample.png"));
+
+  const row = page.locator(".queue-item").first();
+  await row.locator(".output-select").selectOption("image/jpeg");
+  await page.locator("#go-button").click();
+
+  await expect(row.locator(".item-status")).toHaveText("Done", { timeout: 60_000 });
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator("#download-all-button").click();
+  const download = await downloadPromise;
+
+  expect(download.suggestedFilename().toLowerCase()).toMatch(/\.jpg$/);
+  expect(download.suggestedFilename().toLowerCase()).not.toMatch(/\.zip$/);
+  await expect(page.locator(".status")).toContainText("Downloaded sample.jpg.");
+});
 
 for (const fixture of manifest.sources) {
   for (const output of outputsByKind[fixture.kind] || []) {
