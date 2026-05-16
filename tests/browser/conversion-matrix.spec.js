@@ -17,6 +17,7 @@ const outputsByKind = {
     { label: "JPG", value: "image/jpeg", extension: ".jpg" },
     { label: "PNG", value: "image/png", extension: ".png" },
     { label: "WebP", value: "image/webp", extension: ".webp" },
+    { label: "AVIF", value: "image/avif", extension: ".avif" },
     { label: "ICO", value: "ico", extension: ".ico" },
     { label: "PDF", value: "pdf", extension: ".pdf" }
   ],
@@ -69,7 +70,25 @@ const outputsByKind = {
     { label: "YAML", value: "yaml", extension: ".yaml" },
     { label: "CSV", value: "csv", extension: ".csv" },
     { label: "TSV", value: "tsv", extension: ".tsv" },
-    { label: "XML", value: "xml", extension: ".xml" }
+    { label: "XML", value: "xml", extension: ".xml" },
+    { label: "XLSX", value: "xlsx", extension: ".xlsx" }
+  ],
+  config: [
+    { label: "JSON", value: "json", extension: ".json" },
+    { label: "YAML", value: "yaml", extension: ".yaml" },
+    { label: "TOML", value: "toml", extension: ".toml" },
+    { label: "INI", value: "ini", extension: ".ini" }
+  ],
+  subtitle: [
+    { label: "SRT", value: "srt", extension: ".srt" },
+    { label: "VTT", value: "vtt", extension: ".vtt" },
+    { label: "TXT", value: "txt", extension: ".txt" }
+  ],
+  geo: [
+    { label: "GeoJSON", value: "geojson", extension: ".geojson" },
+    { label: "KML", value: "kml", extension: ".kml" },
+    { label: "GPX", value: "gpx", extension: ".gpx" },
+    { label: "CSV", value: "csv", extension: ".csv" }
   ],
   ebook: [
     { label: "HTML", value: "html", extension: ".html" },

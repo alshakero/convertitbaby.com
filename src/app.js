@@ -28,6 +28,7 @@ const OUTPUTS = {
     { label: "JPG", value: "image/jpeg", kind: "image" },
     { label: "PNG", value: "image/png", kind: "image" },
     { label: "WebP", value: "image/webp", kind: "image" },
+    { label: "AVIF", value: "image/avif", kind: "image" },
     { label: "ICO", value: "ico", kind: "image-ico" },
     { label: "PDF", value: "pdf", kind: "image-pdf" }
   ],
@@ -80,7 +81,25 @@ const OUTPUTS = {
     { label: "YAML", value: "yaml", kind: "data" },
     { label: "CSV", value: "csv", kind: "data" },
     { label: "TSV", value: "tsv", kind: "data" },
-    { label: "XML", value: "xml", kind: "data" }
+    { label: "XML", value: "xml", kind: "data" },
+    { label: "XLSX", value: "xlsx", kind: "data" }
+  ],
+  config: [
+    { label: "JSON", value: "json", kind: "config" },
+    { label: "YAML", value: "yaml", kind: "config" },
+    { label: "TOML", value: "toml", kind: "config" },
+    { label: "INI", value: "ini", kind: "config" }
+  ],
+  subtitle: [
+    { label: "SRT", value: "srt", kind: "subtitle" },
+    { label: "VTT", value: "vtt", kind: "subtitle" },
+    { label: "TXT", value: "txt", kind: "subtitle" }
+  ],
+  geo: [
+    { label: "GeoJSON", value: "geojson", kind: "geo" },
+    { label: "KML", value: "kml", kind: "geo" },
+    { label: "GPX", value: "gpx", kind: "geo" },
+    { label: "CSV", value: "csv", kind: "geo" }
   ],
   ebook: [
     { label: "HTML", value: "html", kind: "ebook" },
@@ -322,6 +341,12 @@ async function convertQueueItem(file, output) {
       return [await convertDocumentFile(file, output.value)];
     case "data":
       return [await convertDataFile(file, output.value)];
+    case "config":
+      return [await convertConfigFile(file, output.value)];
+    case "subtitle":
+      return [await convertSubtitleFile(file, output.value)];
+    case "geo":
+      return [await convertGeoFile(file, output.value)];
     case "ebook":
       return [await convertEbookFile(file, output.value)];
     case "svg-raster":
@@ -372,9 +397,38 @@ async function convertEbookFile(file, outputValue) {
 }
 
 async function convertDataFile(file, outputValue) {
-  const source = parseDataText(await file.text(), extension(file.name));
+  const source = await parseDataFile(file);
+  if (outputValue === "xlsx") {
+    return {
+      blob: createXlsx(normalizeRows(source)),
+      filename: rename(file.name, "xlsx"),
+      mimeType: mimeForExtension("xlsx")
+    };
+  }
   const text = serializeData(source, outputValue);
   return textDownload(text, rename(file.name, outputValue), mimeForExtension(outputValue));
+}
+
+async function convertConfigFile(file, outputValue) {
+  const source = parseConfigText(await file.text(), extension(file.name));
+  return textDownload(serializeConfig(source, outputValue), rename(file.name, outputValue), mimeForExtension(outputValue));
+}
+
+async function convertSubtitleFile(file, outputValue) {
+  const cues = parseSubtitleText(await file.text(), extension(file.name));
+  if (outputValue === "srt") return textDownload(cuesToSrt(cues), rename(file.name, "srt"), mimeForExtension("srt"));
+  if (outputValue === "vtt") return textDownload(cuesToVtt(cues), rename(file.name, "vtt"), mimeForExtension("vtt"));
+  if (outputValue === "txt") return textDownload(cues.map((cue) => cue.text).join("\n\n"), rename(file.name, "txt"), "text/plain");
+  throw new Error("That subtitle output is not available for this file.");
+}
+
+async function convertGeoFile(file, outputValue) {
+  const features = parseGeoText(await file.text(), extension(file.name));
+  if (outputValue === "geojson") return textDownload(geoToGeoJson(features), rename(file.name, "geojson"), mimeForExtension("geojson"));
+  if (outputValue === "kml") return textDownload(geoToKml(features), rename(file.name, "kml"), mimeForExtension("kml"));
+  if (outputValue === "gpx") return textDownload(geoToGpx(features), rename(file.name, "gpx"), mimeForExtension("gpx"));
+  if (outputValue === "csv") return textDownload(geoToCsv(features), rename(file.name, "csv"), mimeForExtension("csv"));
+  throw new Error("That map output is not available for this file.");
 }
 
 async function convertCodeFile(file, mode) {
@@ -504,24 +558,16 @@ async function convertArchiveFile(file, formatKey) {
 }
 
 async function convertImageFile(file, mime, quality = 0.92) {
-  let sourceBlob = file;
-  if (isHeic(file)) {
-    const heic2any = (await loadHeic2Any()).default;
-    sourceBlob = await heic2any({ blob: file, toType: mime, quality });
-    if (Array.isArray(sourceBlob)) sourceBlob = sourceBlob[0];
-  }
-
-  const bitmap = await createImageBitmap(sourceBlob);
+  const source = await imageFileToCanvas(file, mime === "image/jpeg" ? "image/png" : mime);
   const canvas = document.createElement("canvas");
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
+  canvas.width = source.width;
+  canvas.height = source.height;
   const ctx = canvas.getContext("2d", { alpha: mime !== "image/jpeg" });
   if (mime === "image/jpeg") {
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
-  ctx.drawImage(bitmap, 0, 0);
-  bitmap.close();
+  ctx.drawImage(source, 0, 0);
 
   const blob = await canvasToBlob(canvas, mime, quality);
   return { blob, filename: rename(file.name, extensionForMime(mime)), mimeType: mime };
@@ -726,19 +772,121 @@ async function pdfToPngFiles(file) {
 }
 
 async function imageFileToPng(file) {
-  let source = file;
+  const canvas = await imageFileToCanvas(file, "image/png");
+  return canvasToBlob(canvas, "image/png");
+}
+
+async function imageFileToCanvas(file, heicOutputType = "image/png") {
   if (isHeic(file)) {
     const heic2any = (await loadHeic2Any()).default;
-    source = await heic2any({ blob: file, toType: "image/png" });
+    let source = await heic2any({ blob: file, toType: heicOutputType });
     if (Array.isArray(source)) source = source[0];
+    return blobToCanvas(source);
   }
-  const bitmap = await createImageBitmap(source);
+  if (extension(file.name) === "bmp") return bmpToCanvas(file);
+  if (["tif", "tiff"].includes(extension(file.name))) return tiffToCanvas(file);
+  return blobToCanvas(file);
+}
+
+async function blobToCanvas(blob) {
+  const bitmap = await createImageBitmap(blob);
   const canvas = document.createElement("canvas");
   canvas.width = bitmap.width;
   canvas.height = bitmap.height;
   canvas.getContext("2d").drawImage(bitmap, 0, 0);
   bitmap.close();
-  return canvasToBlob(canvas, "image/png");
+  return canvas;
+}
+
+async function bmpToCanvas(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (view.getUint16(0, true) !== 0x4d42) throw new Error("That BMP file could not be read.");
+  const dataOffset = view.getUint32(10, true);
+  const width = view.getInt32(18, true);
+  const rawHeight = view.getInt32(22, true);
+  const height = Math.abs(rawHeight);
+  const bitsPerPixel = view.getUint16(28, true);
+  if (![24, 32].includes(bitsPerPixel)) throw new Error("That BMP file could not be read.");
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  const imageData = ctx.createImageData(width, height);
+  const bytesPerPixel = bitsPerPixel / 8;
+  const rowSize = Math.floor((bitsPerPixel * width + 31) / 32) * 4;
+  for (let y = 0; y < height; y += 1) {
+    const sourceY = rawHeight > 0 ? height - 1 - y : y;
+    const rowOffset = dataOffset + sourceY * rowSize;
+    for (let x = 0; x < width; x += 1) {
+      const sourceOffset = rowOffset + x * bytesPerPixel;
+      const targetOffset = (y * width + x) * 4;
+      imageData.data[targetOffset] = bytes[sourceOffset + 2];
+      imageData.data[targetOffset + 1] = bytes[sourceOffset + 1];
+      imageData.data[targetOffset + 2] = bytes[sourceOffset];
+      imageData.data[targetOffset + 3] = bitsPerPixel === 32 ? bytes[sourceOffset + 3] : 255;
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
+async function tiffToCanvas(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const littleEndian = view.getUint16(0, false) === 0x4949;
+  if (!littleEndian && view.getUint16(0, false) !== 0x4d4d) throw new Error("That TIFF file could not be read.");
+  if (view.getUint16(2, littleEndian) !== 42) throw new Error("That TIFF file could not be read.");
+  const ifdOffset = view.getUint32(4, littleEndian);
+  const tags = readTiffTags(view, ifdOffset, littleEndian);
+  const width = tiffTagValue(view, tags.get(256), littleEndian);
+  const height = tiffTagValue(view, tags.get(257), littleEndian);
+  const stripOffset = tiffTagValue(view, tags.get(273), littleEndian);
+  const samplesPerPixel = tiffTagValue(view, tags.get(277), littleEndian) || 3;
+  const bitsPerSampleTag = tags.get(258);
+  const bitsPerSample = bitsPerSampleTag.count === 1 ? tiffTagValue(view, bitsPerSampleTag, littleEndian) : 8;
+  const compression = tiffTagValue(view, tags.get(259), littleEndian) || 1;
+  if (bitsPerSample !== 8 || compression !== 1 || !width || !height || !stripOffset) {
+    throw new Error("That TIFF file could not be read.");
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  const imageData = ctx.createImageData(width, height);
+  for (let pixel = 0; pixel < width * height; pixel += 1) {
+    const sourceOffset = stripOffset + pixel * samplesPerPixel;
+    const targetOffset = pixel * 4;
+    imageData.data[targetOffset] = bytes[sourceOffset];
+    imageData.data[targetOffset + 1] = samplesPerPixel > 1 ? bytes[sourceOffset + 1] : bytes[sourceOffset];
+    imageData.data[targetOffset + 2] = samplesPerPixel > 2 ? bytes[sourceOffset + 2] : bytes[sourceOffset];
+    imageData.data[targetOffset + 3] = samplesPerPixel > 3 ? bytes[sourceOffset + 3] : 255;
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
+function readTiffTags(view, ifdOffset, littleEndian) {
+  const count = view.getUint16(ifdOffset, littleEndian);
+  const tags = new Map();
+  for (let index = 0; index < count; index += 1) {
+    const offset = ifdOffset + 2 + index * 12;
+    const tag = view.getUint16(offset, littleEndian);
+    tags.set(tag, {
+      type: view.getUint16(offset + 2, littleEndian),
+      count: view.getUint32(offset + 4, littleEndian),
+      valueOffset: offset + 8
+    });
+  }
+  return tags;
+}
+
+function tiffTagValue(view, tag, littleEndian) {
+  if (!tag) return 0;
+  if (tag.type === 3 && tag.count === 1) return view.getUint16(tag.valueOffset, littleEndian);
+  if (tag.type === 4 && tag.count === 1) return view.getUint32(tag.valueOffset, littleEndian);
+  const offset = view.getUint32(tag.valueOffset, littleEndian);
+  return tag.type === 3 ? view.getUint16(offset, littleEndian) : view.getUint32(offset, littleEndian);
 }
 
 async function docxToText(file) {
@@ -800,6 +948,12 @@ async function inflateZipEntry(data, method, expectedSize) {
   throw new Error("That compressed file could not be read.");
 }
 
+async function parseDataFile(file) {
+  const ext = extension(file.name);
+  if (ext === "xlsx") return parseXlsx(file);
+  return parseDataText(await file.text(), ext);
+}
+
 function parseDataText(text, ext) {
   if (ext === "json") return JSON.parse(text);
   if (["yaml", "yml"].includes(ext)) return parseSimpleYaml(text);
@@ -809,6 +963,7 @@ function parseDataText(text, ext) {
   if (ext === "vcf") return parseKeyValueLines(text, /^BEGIN:VCARD|^END:VCARD/i);
   if (ext === "ics") return parseKeyValueLines(text, /^BEGIN:VCALENDAR|^END:VCALENDAR|^BEGIN:VEVENT|^END:VEVENT/i);
   if (ext === "env") return parseEnv(text);
+  if (ext === "geojson") return JSON.parse(text);
   throw new Error("That data file could not be read.");
 }
 
@@ -819,6 +974,67 @@ function serializeData(value, ext) {
   if (ext === "tsv") return arrayToDelimited(normalizeRows(value), "\t");
   if (ext === "xml") return objectToXml(value);
   throw new Error("That data output is not available for this file.");
+}
+
+async function parseXlsx(file) {
+  const entries = await unzipEntries(file);
+  const sharedStrings = parseSharedStrings(entries.get("xl/sharedStrings.xml"));
+  const sheet = entries.get("xl/worksheets/sheet1.xml");
+  if (!sheet) throw new Error("That XLSX file could not be read.");
+  const xml = new TextDecoder().decode(sheet);
+  const rows = [...xml.matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g)].map((rowMatch) => {
+    const cells = [];
+    for (const cellMatch of rowMatch[1].matchAll(/<c[^>]*r="([A-Z]+)\d+"[^>]*(?:t="([^"]+)")?[^>]*>([\s\S]*?)<\/c>/g)) {
+      const column = columnIndex(cellMatch[1]);
+      const type = cellMatch[2];
+      const valueMatch = cellMatch[3].match(/<v>([\s\S]*?)<\/v>/);
+      const inlineMatch = cellMatch[3].match(/<t[^>]*>([\s\S]*?)<\/t>/);
+      let value = valueMatch ? decodeXml(valueMatch[1]) : inlineMatch ? decodeXml(inlineMatch[1]) : "";
+      if (type === "s") value = sharedStrings[Number(value)] || "";
+      cells[column] = value;
+    }
+    return cells;
+  });
+  const headers = rows.shift() || [];
+  return rows.map((row) => Object.fromEntries(headers.map((header, index) => [header || `column${index + 1}`, row[index] || ""])));
+}
+
+function parseSharedStrings(bytes) {
+  if (!bytes) return [];
+  const xml = new TextDecoder().decode(bytes);
+  return [...xml.matchAll(/<si[^>]*>[\s\S]*?<t[^>]*>([\s\S]*?)<\/t>[\s\S]*?<\/si>/g)].map((match) => decodeXml(match[1]));
+}
+
+function createXlsx(rows) {
+  const normalizedRows = normalizeRows(rows);
+  const headers = [...new Set(normalizedRows.flatMap((row) => Object.keys(row)))];
+  const table = [headers, ...normalizedRows.map((row) => headers.map((header) => row[header] ?? ""))];
+  const sheetRows = table.map((row, rowIndex) => `<row r="${rowIndex + 1}">${row.map((value, columnIndexValue) => {
+    const cell = `${columnName(columnIndexValue)}${rowIndex + 1}`;
+    return `<c r="${cell}" t="inlineStr"><is><t>${escapeHtml(String(value))}</t></is></c>`;
+  }).join("")}</row>`).join("");
+  return zipBlobFromEntries([
+    ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`],
+    ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ["xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>`],
+    ["xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>`],
+    ["xl/worksheets/sheet1.xml", `<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${sheetRows}</sheetData></worksheet>`]
+  ], mimeForExtension("xlsx"));
+}
+
+function columnIndex(name) {
+  return [...name].reduce((total, char) => total * 26 + char.charCodeAt(0) - 64, 0) - 1;
+}
+
+function columnName(index) {
+  let name = "";
+  let value = index + 1;
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    name = String.fromCharCode(65 + remainder) + name;
+    value = Math.floor((value - remainder) / 26);
+  }
+  return name;
 }
 
 function parseDelimited(text, delimiter) {
@@ -936,6 +1152,182 @@ function parseEnv(text) {
     result[key.trim()] = rest.join("=").trim();
   }
   return result;
+}
+
+function parseConfigText(text, ext) {
+  if (ext === "json") return JSON.parse(text);
+  if (["yaml", "yml"].includes(ext)) return parseSimpleYaml(text);
+  if (ext === "toml") return parseToml(text);
+  if (ext === "ini") return parseIni(text);
+  throw new Error("That config file could not be read.");
+}
+
+function serializeConfig(value, ext) {
+  if (ext === "json") return `${JSON.stringify(value, null, 2)}\n`;
+  if (ext === "yaml") return objectToYaml(value);
+  if (ext === "toml") return objectToToml(value);
+  if (ext === "ini") return objectToIni(value);
+  throw new Error("That config output is not available for this file.");
+}
+
+function parseToml(text) {
+  const result = {};
+  let target = result;
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.replace(/#.*/, "").trim();
+    if (!line) continue;
+    const section = line.match(/^\[([^\]]+)\]$/);
+    if (section) {
+      target = result[section[1]] ||= {};
+      continue;
+    }
+    const match = line.match(/^([^=]+)=\s*(.*)$/);
+    if (match) target[match[1].trim()] = parseScalar(match[2].trim());
+  }
+  return result;
+}
+
+function parseIni(text) {
+  const result = {};
+  let target = result;
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.replace(/[;#].*/, "").trim();
+    if (!line) continue;
+    const section = line.match(/^\[([^\]]+)\]$/);
+    if (section) {
+      target = result[section[1]] ||= {};
+      continue;
+    }
+    const match = line.match(/^([^=]+)=\s*(.*)$/);
+    if (match) target[match[1].trim()] = parseScalar(match[2].trim());
+  }
+  return result;
+}
+
+function objectToToml(value) {
+  const lines = [];
+  for (const [key, item] of Object.entries(value || {})) {
+    if (typeof item === "object" && item !== null && !Array.isArray(item)) {
+      lines.push(`[${key}]`);
+      lines.push(...Object.entries(item).map(([childKey, childValue]) => `${childKey} = ${tomlValue(childValue)}`));
+    } else {
+      lines.push(`${key} = ${tomlValue(item)}`);
+    }
+  }
+  return `${lines.join("\n")}\n`;
+}
+
+function objectToIni(value) {
+  const lines = [];
+  for (const [key, item] of Object.entries(value || {})) {
+    if (typeof item === "object" && item !== null && !Array.isArray(item)) {
+      lines.push(`[${key}]`);
+      lines.push(...Object.entries(item).map(([childKey, childValue]) => `${childKey}=${childValue}`));
+    } else {
+      lines.push(`${key}=${item}`);
+    }
+  }
+  return `${lines.join("\n")}\n`;
+}
+
+function tomlValue(value) {
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return `"${String(value).replaceAll('"', '\\"')}"`;
+}
+
+function parseSubtitleText(text, ext) {
+  return ext === "vtt" ? parseVtt(text) : parseSrt(text);
+}
+
+function parseSrt(text) {
+  return text.trim().split(/\n\s*\n/).map((block, index) => {
+    const lines = block.trim().split(/\r?\n/);
+    if (/^\d+$/.test(lines[0])) lines.shift();
+    const timing = lines.shift() || "";
+    const [start = "00:00:00,000", end = "00:00:00,000"] = timing.split(/\s+-->\s+/);
+    return { index: index + 1, start: start.trim(), end: end.trim(), text: lines.join("\n") };
+  }).filter((cue) => cue.text);
+}
+
+function parseVtt(text) {
+  return text.replace(/^WEBVTT[^\n]*\n+/i, "").trim().split(/\n\s*\n/).map((block, index) => {
+    const lines = block.trim().split(/\r?\n/);
+    if (!lines[0]?.includes("-->")) lines.shift();
+    const timing = lines.shift() || "";
+    const [start = "00:00:00.000", end = "00:00:00.000"] = timing.split(/\s+-->\s+/);
+    return { index: index + 1, start: start.trim(), end: end.trim(), text: lines.join("\n") };
+  }).filter((cue) => cue.text);
+}
+
+function cuesToSrt(cues) {
+  return `${cues.map((cue, index) => `${index + 1}\n${subtitleTime(cue.start, ",")} --> ${subtitleTime(cue.end, ",")}\n${cue.text}`).join("\n\n")}\n`;
+}
+
+function cuesToVtt(cues) {
+  return `WEBVTT\n\n${cues.map((cue) => `${subtitleTime(cue.start, ".")} --> ${subtitleTime(cue.end, ".")}\n${cue.text}`).join("\n\n")}\n`;
+}
+
+function subtitleTime(value, separator) {
+  return value.replace(/[,.](\d{1,3})/, `${separator}$1`.padEnd(4, "0"));
+}
+
+function parseGeoText(text, ext) {
+  if (ext === "geojson") return geoJsonToFeatures(JSON.parse(text));
+  if (ext === "kml") return kmlToFeatures(text);
+  if (ext === "gpx") return gpxToFeatures(text);
+  throw new Error("That map file could not be read.");
+}
+
+function geoJsonToFeatures(value) {
+  const features = value.type === "FeatureCollection" ? value.features : value.type === "Feature" ? [value] : [{ type: "Feature", properties: {}, geometry: value }];
+  return features.map((feature) => ({
+    name: feature.properties?.name || "Point",
+    coordinates: feature.geometry?.coordinates || [0, 0]
+  }));
+}
+
+function kmlToFeatures(text) {
+  const doc = new DOMParser().parseFromString(text, "application/xml");
+  return [...doc.querySelectorAll("Placemark")].map((placemark) => ({
+    name: placemark.querySelector("name")?.textContent || "Point",
+    coordinates: parseCoordinateText(placemark.querySelector("coordinates")?.textContent || "0,0")
+  }));
+}
+
+function gpxToFeatures(text) {
+  const doc = new DOMParser().parseFromString(text, "application/xml");
+  return [...doc.querySelectorAll("wpt,trkpt,rtept")].map((point, index) => ({
+    name: point.querySelector("name")?.textContent || `Point ${index + 1}`,
+    coordinates: [Number(point.getAttribute("lon") || 0), Number(point.getAttribute("lat") || 0)]
+  }));
+}
+
+function parseCoordinateText(text) {
+  const [lon = 0, lat = 0] = text.trim().split(/\s+/)[0].split(",").map(Number);
+  return [lon, lat];
+}
+
+function geoToGeoJson(features) {
+  return `${JSON.stringify({
+    type: "FeatureCollection",
+    features: features.map((feature) => ({
+      type: "Feature",
+      properties: { name: feature.name },
+      geometry: { type: "Point", coordinates: feature.coordinates }
+    }))
+  }, null, 2)}\n`;
+}
+
+function geoToKml(features) {
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document>${features.map((feature) => `<Placemark><name>${escapeHtml(feature.name)}</name><Point><coordinates>${feature.coordinates[0]},${feature.coordinates[1]},0</coordinates></Point></Placemark>`).join("")}</Document></kml>\n`;
+}
+
+function geoToGpx(features) {
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="convertitbaby.com">${features.map((feature) => `<wpt lat="${feature.coordinates[1]}" lon="${feature.coordinates[0]}"><name>${escapeHtml(feature.name)}</name></wpt>`).join("")}</gpx>\n`;
+}
+
+function geoToCsv(features) {
+  return arrayToDelimited(features.map((feature) => ({ name: feature.name, longitude: feature.coordinates[0], latitude: feature.coordinates[1] })), ",");
 }
 
 function textToHtml(text) {
@@ -1083,6 +1475,15 @@ function escapeHtml(value) {
   return value.replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
 }
 
+function decodeXml(value) {
+  return value
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
 function loadImageFromBlob(blob) {
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -1114,6 +1515,10 @@ function getOutputOptions(item) {
 }
 
 function getDisabledReason(output, item) {
+  if (output.kind === "image" && output.value === "image/avif" && !canCreateImageMime("image/avif")) {
+    return "AVIF is not available for this file.";
+  }
+
   if (["font", "ebook"].includes(output.kind) && output.requiresNativeEncoder && extension(item.file.name) !== output.value) {
     return `${output.label} is not available for this file.`;
   }
@@ -1218,14 +1623,26 @@ function mimeForExtension(ext) {
     json: "application/json",
     yaml: "application/yaml",
     yml: "application/yaml",
+    toml: "application/toml",
+    ini: "text/plain",
     csv: "text/csv",
     tsv: "text/tab-separated-values",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     xml: "application/xml",
     vcf: "text/vcard",
     ics: "text/calendar",
+    srt: "application/x-subrip",
+    vtt: "text/vtt",
+    geojson: "application/geo+json",
+    kml: "application/vnd.google-earth.kml+xml",
+    gpx: "application/gpx+xml",
     env: "text/plain",
     svg: "image/svg+xml",
     ico: "image/x-icon",
+    avif: "image/avif",
+    bmp: "image/bmp",
+    tif: "image/tiff",
+    tiff: "image/tiff",
     ttf: "font/ttf",
     otf: "font/otf",
     woff: "font/woff",
@@ -1252,7 +1669,10 @@ function mimeForExtension(ext) {
 
 function inferFileKind(file) {
   const ext = extension(file.name);
-  if (["json", "yaml", "yml", "csv", "tsv", "xml", "vcf", "ics", "env"].includes(ext)) return "data";
+  if (["srt", "vtt"].includes(ext)) return "subtitle";
+  if (["geojson", "kml", "gpx"].includes(ext)) return "geo";
+  if (["toml", "ini"].includes(ext)) return "config";
+  if (["json", "yaml", "yml", "csv", "tsv", "xml", "vcf", "ics", "env", "xlsx"].includes(ext)) return "data";
   if (["docx", "txt", "md", "markdown", "html", "htm"].includes(ext)) return "document";
   if (["epub", "mobi", "azw3"].includes(ext)) return "ebook";
   if (ext === "svg") return "vector";
@@ -1264,7 +1684,7 @@ function inferFileKind(file) {
   if (["heic", "heif"].includes(ext) || /hei[cf]/i.test(file.type)) return "heic";
   if (ext === "pdf" || file.type === "application/pdf") return "pdf";
   if (ext === "gif" || file.type === "image/gif") return "gif";
-  if (file.type.startsWith("image/") || ext === "ico") return "image";
+  if (file.type.startsWith("image/") || ["ico", "avif", "bmp", "tif", "tiff"].includes(ext)) return "image";
   if (ext === "mp4" || file.type === "video/mp4") return "video";
   if (file.type.startsWith("video/") || ["mov", "mkv", "webm", "ts"].includes(ext)) return "video";
   if (file.type.startsWith("audio/") || ["mp3", "wav", "aac", "flac", "ogg", "m4a"].includes(ext)) return "audio";
@@ -1276,6 +1696,9 @@ function fileKindLabel(kind) {
     archive: "Archive",
     document: "Document",
     data: "Data",
+    config: "Config",
+    subtitle: "Subtitles",
+    geo: "Map data",
     ebook: "Ebook",
     vector: "Vector",
     font: "Font",
@@ -1565,6 +1988,35 @@ async function createZip(downloads) {
   return new Blob([...chunks, ...centralDirectory, endRecord], { type: "application/zip" });
 }
 
+function zipBlobFromEntries(entries, mimeType = "application/zip") {
+  const encoder = new TextEncoder();
+  const chunks = [];
+  const centralDirectory = [];
+  const { time, date } = getZipDateTime();
+  let offset = 0;
+
+  for (const [filename, content] of entries) {
+    const nameBytes = encoder.encode(filename);
+    const data = typeof content === "string" ? encoder.encode(content) : new Uint8Array(content);
+    const crc = crc32(data);
+    const localHeader = createLocalZipHeader({ nameBytes, crc, size: data.length, time, date });
+    const centralHeader = createCentralZipHeader({ nameBytes, crc, size: data.length, time, date, offset });
+    chunks.push(localHeader, data);
+    centralDirectory.push(centralHeader);
+    offset += localHeader.length + data.length;
+  }
+
+  const centralSize = centralDirectory.reduce((total, chunk) => total + chunk.length, 0);
+  const endRecord = new Uint8Array(22);
+  const view = new DataView(endRecord.buffer);
+  view.setUint32(0, 0x06054b50, true);
+  view.setUint16(8, entries.length, true);
+  view.setUint16(10, entries.length, true);
+  view.setUint32(12, centralSize, true);
+  view.setUint32(16, offset, true);
+  return new Blob([...chunks, ...centralDirectory, endRecord], { type: mimeType });
+}
+
 async function createTar(downloads) {
   const chunks = [];
   const usedNames = new Map();
@@ -1620,6 +2072,13 @@ async function gzipBlob(blob) {
 
 function canGzip() {
   return typeof CompressionStream === "function";
+}
+
+function canCreateImageMime(mime) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  return canvas.toDataURL(mime).startsWith(`data:${mime}`);
 }
 
 function createLocalZipHeader({ nameBytes, crc, size, time, date }) {
@@ -1727,7 +2186,7 @@ function extension(name) {
 }
 
 function extensionForMime(mime) {
-  return ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/x-icon": "ico" })[mime] || "bin";
+  return ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/avif": "avif", "image/x-icon": "ico" })[mime] || "bin";
 }
 
 function isHeic(file) {

@@ -5,6 +5,9 @@ This directory contains one compact fixture for every source extension the app c
 - `image/jpg`
 - `image/png`
 - `image/webp`
+- `image/avif`
+- `image/bmp`
+- `image/tiff`
 - `image/heic`
 - `image/heif`
 - `animation/gif`
@@ -40,6 +43,14 @@ This directory contains one compact fixture for every source extension the app c
 - `data/vcf`
 - `data/ics`
 - `data/env`
+- `data/xlsx`
+- `config/toml`
+- `config/ini`
+- `subtitle/srt`
+- `subtitle/vtt`
+- `geo/geojson`
+- `geo/kml`
+- `geo/gpx`
 - `ebook/epub`
 - `ebook/mobi`
 - `ebook/azw3`
@@ -67,8 +78,10 @@ The fixtures are intentionally tiny so the full conversion matrix can run in a r
 - JPG, PNG, WebP, GIF, MP3, WAV, MP4, and WebM seeds were downloaded from SampleLib.
 - The PDF fixture was downloaded from File Examples.
 - HEIC and HEIF were derived locally from the PNG seed with ImageMagick.
+- AVIF, BMP, and TIFF were derived locally from the PNG seed with ImageMagick.
 - AAC, FLAC, Ogg, and M4A were derived locally from the MP3 seed with FFmpeg.
 - MOV, MKV, and TS were derived locally from the MP4 and MP3 seeds with FFmpeg.
 - Archive fixtures are tiny synthetic files used to verify extension recognition and local container generation.
 - DOCX, EPUB, GLB, OBJ, STL, SVG, document, data, and code fixtures are compact valid files generated locally for the conversion matrix.
+- XLSX, SRT, VTT, TOML, INI, GeoJSON, KML, and GPX fixtures are compact valid files generated locally for the conversion matrix.
 - TTF and OTF fixtures are copied from local system fonts. WOFF and WOFF2 fixtures are compact format-recognition files used only for same-format copy checks.
