@@ -1,0 +1,1 @@
+var e=`/assets/pdf.worker-BgryrOlp.mjs`;export{e as default};
