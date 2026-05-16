@@ -51,6 +51,7 @@ a { color: inherit; }
   height: 36px;
   display: block;
   border-radius: 8px;
+  background: #000094;
   object-fit: cover;
   box-shadow: 0 8px 22px rgba(16, 24, 32, 0.16);
 }
