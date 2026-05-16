@@ -1,5 +1,3 @@
-import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
-
 const state = {
   items: [],
   urls: []
@@ -17,6 +15,7 @@ const statusEl = document.querySelector(".status");
 const progressEl = document.querySelector(".progress");
 const progressBar = document.querySelector(".progress-bar");
 const crcTable = createCrcTable();
+const lazyModules = {};
 let mp3EncoderCtorPromise;
 
 const OUTPUTS = {
@@ -29,6 +28,7 @@ const OUTPUTS = {
     { label: "JPG", value: "image/jpeg", kind: "image" },
     { label: "PNG", value: "image/png", kind: "image" },
     { label: "WebP", value: "image/webp", kind: "image" },
+    { label: "ICO", value: "ico", kind: "image-ico" },
     { label: "PDF", value: "pdf", kind: "image-pdf" }
   ],
   gif: [
@@ -57,6 +57,58 @@ const OUTPUTS = {
     { label: "AAC", value: "aac", kind: "media" },
     { label: "FLAC", value: "flac", kind: "media" },
     { label: "Ogg", value: "ogg", kind: "media" }
+  ],
+  archive: [
+    { label: "ZIP archive", value: "zip", kind: "archive" },
+    { label: "TAR archive", value: "tar", kind: "archive" },
+    { label: "TGZ archive", value: "tgz", kind: "archive" },
+    { label: "GZIP file", value: "gz", kind: "archive" },
+    { label: "7Z archive", value: "7z", kind: "archive", requiresNativeEncoder: true },
+    { label: "RAR archive", value: "rar", kind: "archive", requiresNativeEncoder: true },
+    { label: "BZIP2 file", value: "bz2", kind: "archive", requiresNativeEncoder: true },
+    { label: "XZ file", value: "xz", kind: "archive", requiresNativeEncoder: true },
+    { label: "Zstandard file", value: "zst", kind: "archive", requiresNativeEncoder: true },
+    { label: "Brotli file", value: "br", kind: "archive", requiresNativeEncoder: true }
+  ],
+  document: [
+    { label: "PDF", value: "pdf", kind: "document" },
+    { label: "HTML", value: "html", kind: "document" },
+    { label: "TXT", value: "txt", kind: "document" }
+  ],
+  data: [
+    { label: "JSON", value: "json", kind: "data" },
+    { label: "YAML", value: "yaml", kind: "data" },
+    { label: "CSV", value: "csv", kind: "data" },
+    { label: "TSV", value: "tsv", kind: "data" },
+    { label: "XML", value: "xml", kind: "data" }
+  ],
+  ebook: [
+    { label: "HTML", value: "html", kind: "ebook" },
+    { label: "TXT", value: "txt", kind: "ebook" },
+    { label: "PDF", value: "pdf", kind: "ebook" },
+    { label: "MOBI", value: "mobi", kind: "ebook", requiresNativeEncoder: true },
+    { label: "AZW3", value: "azw3", kind: "ebook", requiresNativeEncoder: true }
+  ],
+  vector: [
+    { label: "PNG", value: "png", kind: "svg-raster" },
+    { label: "WebP", value: "webp", kind: "svg-raster" },
+    { label: "PDF", value: "pdf", kind: "svg-pdf" }
+  ],
+  font: [
+    { label: "TTF", value: "ttf", kind: "font", requiresNativeEncoder: true },
+    { label: "OTF", value: "otf", kind: "font", requiresNativeEncoder: true },
+    { label: "WOFF", value: "woff", kind: "font", requiresNativeEncoder: true },
+    { label: "WOFF2", value: "woff2", kind: "font", requiresNativeEncoder: true }
+  ],
+  model3d: [
+    { label: "OBJ", value: "obj", kind: "model3d" },
+    { label: "STL", value: "stl", kind: "model3d" },
+    { label: "GLTF", value: "gltf", kind: "model3d" },
+    { label: "GLB", value: "glb", kind: "model3d" }
+  ],
+  code: [
+    { label: "Pretty", value: "pretty", kind: "code" },
+    { label: "Minified", value: "min", kind: "code" }
   ],
   unknown: []
 };
@@ -167,7 +219,7 @@ function renderQueue() {
     const supportNote = document.createElement("p");
     supportNote.className = "support-note";
     supportNote.hidden = !hasDisabledOutputs || item.status === "Done";
-    supportNote.textContent = "Some outputs are disabled because this browser cannot create them locally.";
+    supportNote.textContent = "Some outputs are unavailable for this file.";
 
     row.append(info, select, status, remove, supportNote, downloads);
     queueEl.append(row);
@@ -243,6 +295,8 @@ async function convertQueueItem(file, output) {
   switch (output.kind) {
     case "image":
       return [await convertImageFile(file, output.value)];
+    case "image-ico":
+      return [await convertImageToIco(file)];
     case "image-pdf":
       return [await convertSingleImageToPdf(file)];
     case "gif-video":
@@ -262,15 +316,197 @@ async function convertQueueItem(file, output) {
         return [await convertAudioFileToWav(file)];
       }
       return [await convertMediaFile(file, output.value)];
+    case "archive":
+      return [await convertArchiveFile(file, output.value)];
+    case "document":
+      return [await convertDocumentFile(file, output.value)];
+    case "data":
+      return [await convertDataFile(file, output.value)];
+    case "ebook":
+      return [await convertEbookFile(file, output.value)];
+    case "svg-raster":
+      return [await convertSvgToRaster(file, output.value)];
+    case "svg-pdf":
+      return [await convertSvgToPdf(file)];
+    case "font":
+      return [convertCopyOnlyFormat(file, output.value, "font")];
+    case "model3d":
+      return [await convertModelFile(file, output.value)];
+    case "code":
+      return [await convertCodeFile(file, output.value)];
     default:
       throw new Error("Unsupported output.");
   }
 }
 
+async function convertDocumentFile(file, outputValue) {
+  const ext = extension(file.name);
+  const text = ext === "docx" ? await docxToText(file) : await file.text();
+  if (outputValue === "txt") {
+    return textDownload(text, rename(file.name, "txt"), "text/plain");
+  }
+  if (outputValue === "html") {
+    return textDownload(textToHtml(text), rename(file.name, "html"), "text/html");
+  }
+  if (outputValue === "pdf") {
+    return textToPdfDownload(text, rename(file.name, "pdf"));
+  }
+  throw new Error("That document output is not available for this file.");
+}
+
+async function convertEbookFile(file, outputValue) {
+  if (["mobi", "azw3"].includes(outputValue)) {
+    return convertCopyOnlyFormat(file, outputValue, "ebook");
+  }
+  const text = extension(file.name) === "epub" ? await epubToText(file) : await file.text();
+  if (outputValue === "txt") {
+    return textDownload(text, rename(file.name, "txt"), "text/plain");
+  }
+  if (outputValue === "html") {
+    return textDownload(textToHtml(text), rename(file.name, "html"), "text/html");
+  }
+  if (outputValue === "pdf") {
+    return textToPdfDownload(text, rename(file.name, "pdf"));
+  }
+  throw new Error("That ebook output is not available for this file.");
+}
+
+async function convertDataFile(file, outputValue) {
+  const source = parseDataText(await file.text(), extension(file.name));
+  const text = serializeData(source, outputValue);
+  return textDownload(text, rename(file.name, outputValue), mimeForExtension(outputValue));
+}
+
+async function convertCodeFile(file, mode) {
+  const ext = extension(file.name);
+  const text = await file.text();
+  const converted = mode === "min" ? minifyCode(text, ext) : prettyCode(text, ext);
+  return textDownload(converted, rename(file.name, ext), mimeForExtension(ext));
+}
+
+async function convertSvgToRaster(file, outputValue) {
+  const image = await loadImageFromBlob(file);
+  const canvas = document.createElement("canvas");
+  canvas.width = image.naturalWidth || 512;
+  canvas.height = image.naturalHeight || 512;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  revokeImage(image);
+  const mime = outputValue === "webp" ? "image/webp" : "image/png";
+  return {
+    blob: await canvasToBlob(canvas, mime, 0.92),
+    filename: rename(file.name, outputValue),
+    mimeType: mime
+  };
+}
+
+async function convertSvgToPdf(file) {
+  const png = await convertSvgToRaster(file, "png");
+  const imageFile = new File([png.blob], png.filename, { type: png.mimeType });
+  return convertSingleImageToPdf(imageFile);
+}
+
+async function convertImageToIco(file) {
+  const pngBlob = await imageFileToPng(file);
+  const png = new Uint8Array(await pngBlob.arrayBuffer());
+  const header = new Uint8Array(22);
+  const view = new DataView(header.buffer);
+  view.setUint16(2, 1, true);
+  view.setUint16(4, 1, true);
+  header[6] = 0;
+  header[7] = 0;
+  header[8] = 0;
+  header[9] = 0;
+  view.setUint16(10, 1, true);
+  view.setUint16(12, 32, true);
+  view.setUint32(14, png.length, true);
+  view.setUint32(18, header.length, true);
+  return {
+    blob: new Blob([header, png], { type: "image/x-icon" }),
+    filename: rename(file.name, "ico"),
+    mimeType: "image/x-icon"
+  };
+}
+
+async function convertModelFile(file, outputValue) {
+  const ext = extension(file.name);
+  if (ext === outputValue) return copyOriginalFile(file, outputValue);
+  if (ext === "obj" && outputValue === "stl") {
+    return textDownload(objToStl(await file.text()), rename(file.name, "stl"), "model/stl");
+  }
+  if (ext === "stl" && outputValue === "obj") {
+    return textDownload(stlToObj(await file.text()), rename(file.name, "obj"), "model/obj");
+  }
+  if (ext === "gltf" && outputValue === "glb") {
+    return {
+      blob: gltfToGlb(await file.text()),
+      filename: rename(file.name, "glb"),
+      mimeType: "model/gltf-binary"
+    };
+  }
+  if (ext === "glb" && outputValue === "gltf") {
+    return textDownload(await glbToGltf(file), rename(file.name, "gltf"), "model/gltf+json");
+  }
+  throw new Error("That 3D output is not available for this file.");
+}
+
+function convertCopyOnlyFormat(file, outputValue, label) {
+  if (extension(file.name) === outputValue) return copyOriginalFile(file, outputValue);
+  throw new Error(`That ${label} output is not available for this file.`);
+}
+
+async function convertArchiveFile(file, formatKey) {
+  if (extension(file.name) === formatKey) {
+    return copyOriginalFile(file, formatKey);
+  }
+
+  const source = {
+    blob: file,
+    filename: file.name,
+    mimeType: file.type || mimeForExtension(extension(file.name)),
+    size: file.size
+  };
+
+  if (formatKey === "zip") {
+    return {
+      blob: await createZip([source]),
+      filename: rename(file.name, "zip"),
+      mimeType: "application/zip"
+    };
+  }
+
+  if (formatKey === "tar") {
+    return {
+      blob: await createTar([source]),
+      filename: rename(file.name, "tar"),
+      mimeType: "application/x-tar"
+    };
+  }
+
+  if (formatKey === "tgz") {
+    const tarBlob = await createTar([source]);
+    return {
+      blob: await gzipBlob(tarBlob),
+      filename: rename(file.name, "tgz"),
+      mimeType: "application/gzip"
+    };
+  }
+
+  if (formatKey === "gz") {
+    return {
+      blob: await gzipBlob(file),
+      filename: `${file.name}.gz`,
+      mimeType: "application/gzip"
+    };
+  }
+
+  throw new Error("That archive output is not available for this file.");
+}
+
 async function convertImageFile(file, mime, quality = 0.92) {
   let sourceBlob = file;
   if (isHeic(file)) {
-    const heic2any = (await import("heic2any")).default;
+    const heic2any = (await loadHeic2Any()).default;
     sourceBlob = await heic2any({ blob: file, toType: mime, quality });
     if (Array.isArray(sourceBlob)) sourceBlob = sourceBlob[0];
   }
@@ -292,7 +528,7 @@ async function convertImageFile(file, mime, quality = 0.92) {
 }
 
 async function convertSingleImageToPdf(file) {
-  const { PDFDocument } = await import("pdf-lib");
+  const { PDFDocument } = await loadPdfLib();
   const pdf = await PDFDocument.create();
   const pngBlob = await imageFileToPng(file);
   const bytes = await pngBlob.arrayBuffer();
@@ -325,7 +561,7 @@ async function convertMediaFile(file, formatKey) {
     AdtsOutputFormat,
     FlacOutputFormat,
     MpegTsOutputFormat
-  } = await import("mediabunny");
+  } = await loadMediabunny();
 
   const formats = {
     mp4: () => new Mp4OutputFormat({ fastStart: "in-memory" }),
@@ -382,7 +618,7 @@ async function convertAudioTrackToMp3(file) {
 async function decodeAudioBuffer(file) {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextClass) {
-    throw new Error("This browser cannot decode audio locally.");
+    throw new Error("That audio file could not be read.");
   }
 
   const audioContext = new AudioContextClass();
@@ -394,7 +630,7 @@ async function decodeAudioBuffer(file) {
 }
 
 async function convertGifToVideo(file, outputFormat) {
-  const { parseGIF, decompressFrames } = await import("gifuct-js");
+  const { parseGIF, decompressFrames } = await loadGifuct();
   const gif = parseGIF(await file.arrayBuffer());
   const frames = decompressFrames(gif, true);
   if (!frames.length) throw new Error("Could not find animation frames in that GIF.");
@@ -407,7 +643,7 @@ async function convertGifToVideo(file, outputFormat) {
   const mimeType = pickVideoRecorderMime(outputFormat);
   if (!mimeType) {
     stream.getTracks().forEach((track) => track.stop());
-    throw new Error("This device cannot create MP4 locally. Try WebM video instead.");
+    throw new Error("MP4 is not available here. Try WebM video instead.");
   }
 
   const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2200000 });
@@ -433,7 +669,7 @@ async function convertGifToVideo(file, outputFormat) {
 async function convertVideoToGif(file) {
   const maxWidth = 480;
   const fps = 10;
-  const { GIFEncoder, quantize, applyPalette } = await import("gifenc");
+  const { GIFEncoder, quantize, applyPalette } = await loadGifenc();
   const video = document.createElement("video");
   video.muted = true;
   video.playsInline = true;
@@ -467,8 +703,7 @@ async function convertVideoToGif(file) {
 }
 
 async function pdfToPngFiles(file) {
-  const pdfjs = await import("pdfjs-dist/build/pdf.mjs");
-  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+  const pdfjs = await loadPdfJs();
   const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
   const downloads = [];
 
@@ -493,7 +728,7 @@ async function pdfToPngFiles(file) {
 async function imageFileToPng(file) {
   let source = file;
   if (isHeic(file)) {
-    const heic2any = (await import("heic2any")).default;
+    const heic2any = (await loadHeic2Any()).default;
     source = await heic2any({ blob: file, toType: "image/png" });
     if (Array.isArray(source)) source = source[0];
   }
@@ -504,6 +739,362 @@ async function imageFileToPng(file) {
   canvas.getContext("2d").drawImage(bitmap, 0, 0);
   bitmap.close();
   return canvasToBlob(canvas, "image/png");
+}
+
+async function docxToText(file) {
+  const entries = await unzipEntries(file);
+  const documentXml = entries.get("word/document.xml");
+  if (!documentXml) throw new Error("That DOCX file could not be read.");
+  const xml = new TextDecoder().decode(documentXml);
+  return xmlToPlainText(xml);
+}
+
+async function epubToText(file) {
+  const entries = await unzipEntries(file);
+  const textParts = [];
+  for (const [name, bytes] of entries) {
+    if (/\.(xhtml|html|htm)$/i.test(name)) {
+      textParts.push(htmlToText(new TextDecoder().decode(bytes)));
+    }
+  }
+  if (!textParts.length) throw new Error("That EPUB file could not be read.");
+  return textParts.join("\n\n");
+}
+
+async function unzipEntries(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const entries = new Map();
+  let offset = 0;
+  while (offset + 30 <= bytes.length && readUint32(bytes, offset) === 0x04034b50) {
+    const method = readUint16(bytes, offset + 8);
+    const compressedSize = readUint32(bytes, offset + 18);
+    const uncompressedSize = readUint32(bytes, offset + 22);
+    const nameLength = readUint16(bytes, offset + 26);
+    const extraLength = readUint16(bytes, offset + 28);
+    const nameStart = offset + 30;
+    const dataStart = nameStart + nameLength + extraLength;
+    const dataEnd = dataStart + compressedSize;
+    const name = new TextDecoder().decode(bytes.slice(nameStart, nameStart + nameLength));
+    const data = bytes.slice(dataStart, dataEnd);
+    if (!name.endsWith("/")) {
+      entries.set(name, await inflateZipEntry(data, method, uncompressedSize));
+    }
+    offset = dataEnd;
+  }
+  return entries;
+}
+
+async function inflateZipEntry(data, method, expectedSize) {
+  if (method === 0) return data;
+  if (method !== 8) throw new Error("That compressed file could not be read.");
+  const formats = ["deflate-raw", "deflate"];
+  for (const format of formats) {
+    try {
+      const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream(format));
+      const result = new Uint8Array(await new Response(stream).arrayBuffer());
+      if (!expectedSize || result.length === expectedSize) return result;
+    } catch {
+      // Try the next deflate wrapper.
+    }
+  }
+  throw new Error("That compressed file could not be read.");
+}
+
+function parseDataText(text, ext) {
+  if (ext === "json") return JSON.parse(text);
+  if (["yaml", "yml"].includes(ext)) return parseSimpleYaml(text);
+  if (ext === "csv") return parseDelimited(text, ",");
+  if (ext === "tsv") return parseDelimited(text, "\t");
+  if (ext === "xml") return xmlToObject(text);
+  if (ext === "vcf") return parseKeyValueLines(text, /^BEGIN:VCARD|^END:VCARD/i);
+  if (ext === "ics") return parseKeyValueLines(text, /^BEGIN:VCALENDAR|^END:VCALENDAR|^BEGIN:VEVENT|^END:VEVENT/i);
+  if (ext === "env") return parseEnv(text);
+  throw new Error("That data file could not be read.");
+}
+
+function serializeData(value, ext) {
+  if (ext === "json") return `${JSON.stringify(value, null, 2)}\n`;
+  if (ext === "yaml") return objectToYaml(value);
+  if (ext === "csv") return arrayToDelimited(normalizeRows(value), ",");
+  if (ext === "tsv") return arrayToDelimited(normalizeRows(value), "\t");
+  if (ext === "xml") return objectToXml(value);
+  throw new Error("That data output is not available for this file.");
+}
+
+function parseDelimited(text, delimiter) {
+  const rows = text.trim().split(/\r?\n/).map((line) => splitDelimitedLine(line, delimiter));
+  const headers = rows.shift() || [];
+  return rows.map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index] || ""])));
+}
+
+function splitDelimitedLine(line, delimiter) {
+  const values = [];
+  let value = "";
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if (char === '"' && line[index + 1] === '"') {
+      value += '"';
+      index += 1;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === delimiter && !quoted) {
+      values.push(value);
+      value = "";
+    } else {
+      value += char;
+    }
+  }
+  values.push(value);
+  return values;
+}
+
+function arrayToDelimited(rows, delimiter) {
+  const headers = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+  return [
+    headers.map((value) => escapeDelimited(value, delimiter)).join(delimiter),
+    ...rows.map((row) => headers.map((header) => escapeDelimited(row[header] ?? "", delimiter)).join(delimiter))
+  ].join("\n");
+}
+
+function escapeDelimited(value, delimiter) {
+  const text = String(value);
+  return /["\n\r]/.test(text) || text.includes(delimiter) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function normalizeRows(value) {
+  if (Array.isArray(value)) return value.map((item) => typeof item === "object" && item ? item : { value: item });
+  if (typeof value === "object" && value) return [value];
+  return [{ value }];
+}
+
+function parseSimpleYaml(text) {
+  const result = {};
+  for (const line of text.split(/\r?\n/)) {
+    const match = line.match(/^\s*([^:#]+):\s*(.*)\s*$/);
+    if (match) result[match[1].trim()] = parseScalar(match[2].trim());
+  }
+  return result;
+}
+
+function objectToYaml(value) {
+  if (Array.isArray(value)) return value.map((item) => `- ${JSON.stringify(item)}`).join("\n");
+  return Object.entries(value || {}).map(([key, item]) => `${key}: ${formatYamlScalar(item)}`).join("\n");
+}
+
+function formatYamlScalar(value) {
+  return typeof value === "object" && value !== null ? JSON.stringify(value) : String(value);
+}
+
+function parseScalar(value) {
+  if (/^-?\d+(\.\d+)?$/.test(value)) return Number(value);
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return value.replace(/^["']|["']$/g, "");
+}
+
+function xmlToObject(text) {
+  const doc = new DOMParser().parseFromString(text, "application/xml");
+  const error = doc.querySelector("parsererror");
+  if (error) throw new Error("That XML file could not be read.");
+  return elementToObject(doc.documentElement);
+}
+
+function elementToObject(element) {
+  const children = [...element.children];
+  if (!children.length) return { [element.nodeName]: element.textContent.trim() };
+  return {
+    [element.nodeName]: Object.assign({}, ...children.map(elementToObject))
+  };
+}
+
+function objectToXml(value) {
+  const [root, content] = Object.entries(value || { root: "" })[0];
+  return `<?xml version="1.0" encoding="UTF-8"?>\n${xmlNode(root || "root", content)}\n`;
+}
+
+function xmlNode(name, value) {
+  if (Array.isArray(value)) return value.map((item) => xmlNode(name, item)).join("");
+  if (typeof value === "object" && value !== null) {
+    return `<${name}>${Object.entries(value).map(([key, item]) => xmlNode(key, item)).join("")}</${name}>`;
+  }
+  return `<${name}>${escapeHtml(String(value ?? ""))}</${name}>`;
+}
+
+function parseKeyValueLines(text, ignoredPattern) {
+  return text.split(/\r?\n/).filter((line) => line && !ignoredPattern.test(line)).map((line) => {
+    const [rawKey, ...rest] = line.split(":");
+    return { key: rawKey.split(";")[0], value: rest.join(":") };
+  });
+}
+
+function parseEnv(text) {
+  const result = {};
+  for (const line of text.split(/\r?\n/)) {
+    if (!line || line.trim().startsWith("#") || !line.includes("=")) continue;
+    const [key, ...rest] = line.split("=");
+    result[key.trim()] = rest.join("=").trim();
+  }
+  return result;
+}
+
+function textToHtml(text) {
+  return `<!doctype html>
+<html><head><meta charset="utf-8"><title>Converted document</title></head><body>${escapeHtml(text).split(/\n{2,}/).map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br>")}</p>`).join("")}</body></html>`;
+}
+
+function htmlToText(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return doc.body.textContent.replace(/\s+\n/g, "\n").trim();
+}
+
+function xmlToPlainText(xml) {
+  return xml
+    .replace(/<w:tab\/>/g, "\t")
+    .replace(/<\/w:p>/g, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .trim();
+}
+
+async function textToPdfDownload(text, filename) {
+  const { PDFDocument, StandardFonts } = await loadPdfLib();
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const fontSize = 12;
+  const margin = 48;
+  const lineHeight = 16;
+  let page = pdf.addPage([612, 792]);
+  let y = page.getHeight() - margin;
+  for (const line of wrapText(text, 86)) {
+    if (y < margin) {
+      page = pdf.addPage([612, 792]);
+      y = page.getHeight() - margin;
+    }
+    page.drawText(line || " ", { x: margin, y, size: fontSize, font });
+    y -= lineHeight;
+  }
+  return {
+    blob: new Blob([await pdf.save()], { type: "application/pdf" }),
+    filename,
+    mimeType: "application/pdf"
+  };
+}
+
+function wrapText(text, width) {
+  return text.split(/\r?\n/).flatMap((line) => {
+    const chunks = [];
+    let current = "";
+    for (const word of line.split(/\s+/)) {
+      if ((current + " " + word).trim().length > width) {
+        chunks.push(current);
+        current = word;
+      } else {
+        current = `${current} ${word}`.trim();
+      }
+    }
+    chunks.push(current);
+    return chunks;
+  });
+}
+
+function textDownload(text, filename, mimeType) {
+  return {
+    blob: new Blob([text], { type: mimeType }),
+    filename,
+    mimeType
+  };
+}
+
+function minifyCode(text, ext) {
+  if (ext === "json") return JSON.stringify(JSON.parse(text));
+  return text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\s+/g, " ").replace(/\s*([{}:;,>])\s*/g, "$1").trim();
+}
+
+function prettyCode(text, ext) {
+  if (ext === "json") return `${JSON.stringify(JSON.parse(text), null, 2)}\n`;
+  if (["html", "xml"].includes(ext)) return text.replace(/></g, ">\n<");
+  return text.replace(/([{};])/g, "$1\n").replace(/\n{2,}/g, "\n").trim();
+}
+
+function objToStl(text) {
+  const vertices = [];
+  const facets = [];
+  for (const line of text.split(/\r?\n/)) {
+    const parts = line.trim().split(/\s+/);
+    if (parts[0] === "v") vertices.push(parts.slice(1, 4).map(Number));
+    if (parts[0] === "f") {
+      const indexes = parts.slice(1).map((part) => Number(part.split("/")[0]) - 1);
+      for (let index = 1; index < indexes.length - 1; index += 1) {
+        facets.push([vertices[indexes[0]], vertices[indexes[index]], vertices[indexes[index + 1]]]);
+      }
+    }
+  }
+  return `solid converted\n${facets.map((facet) => `  facet normal 0 0 0\n    outer loop\n${facet.map((vertex) => `      vertex ${vertex.join(" ")}`).join("\n")}\n    endloop\n  endfacet`).join("\n")}\nendsolid converted\n`;
+}
+
+function stlToObj(text) {
+  const vertices = [...text.matchAll(/vertex\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)/g)].map((match) => match.slice(1, 4).map(Number));
+  const lines = vertices.map((vertex) => `v ${vertex.join(" ")}`);
+  for (let index = 0; index < vertices.length; index += 3) {
+    lines.push(`f ${index + 1} ${index + 2} ${index + 3}`);
+  }
+  return `${lines.join("\n")}\n`;
+}
+
+function gltfToGlb(text) {
+  const json = new TextEncoder().encode(text);
+  const paddedJsonLength = align4(json.length);
+  const totalLength = 12 + 8 + paddedJsonLength;
+  const bytes = new Uint8Array(totalLength);
+  const view = new DataView(bytes.buffer);
+  view.setUint32(0, 0x46546c67, true);
+  view.setUint32(4, 2, true);
+  view.setUint32(8, totalLength, true);
+  view.setUint32(12, paddedJsonLength, true);
+  view.setUint32(16, 0x4e4f534a, true);
+  bytes.set(json, 20);
+  bytes.fill(0x20, 20 + json.length, 20 + paddedJsonLength);
+  return new Blob([bytes], { type: "model/gltf-binary" });
+}
+
+async function glbToGltf(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (readUint32(bytes, 0) !== 0x46546c67) throw new Error("That GLB file could not be read.");
+  const jsonLength = readUint32(bytes, 12);
+  return new TextDecoder().decode(bytes.slice(20, 20 + jsonLength)).trim();
+}
+
+function align4(value) {
+  return Math.ceil(value / 4) * 4;
+}
+
+function readUint16(bytes, offset) {
+  return new DataView(bytes.buffer, bytes.byteOffset + offset, 2).getUint16(0, true);
+}
+
+function readUint32(bytes, offset) {
+  return new DataView(bytes.buffer, bytes.byteOffset + offset, 4).getUint32(0, true);
+}
+
+function escapeHtml(value) {
+  return value.replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
+}
+
+function loadImageFromBlob(blob) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("That image could not be read."));
+    image.src = URL.createObjectURL(blob);
+    state.urls.push(image.src);
+  });
+}
+
+function revokeImage(image) {
+  if (image.src) URL.revokeObjectURL(image.src);
 }
 
 function getSelectedOutput(item) {
@@ -523,19 +1114,54 @@ function getOutputOptions(item) {
 }
 
 function getDisabledReason(output, item) {
+  if (["font", "ebook"].includes(output.kind) && output.requiresNativeEncoder && extension(item.file.name) !== output.value) {
+    return `${output.label} is not available for this file.`;
+  }
+
+  if (output.kind === "ebook" && ["mobi", "azw3"].includes(extension(item.file.name)) && output.value !== extension(item.file.name)) {
+    return `${output.label} is not available for this file.`;
+  }
+
+  if (output.kind === "model3d" && !canConvertModelByExtension(item.file, output.value)) {
+    return `${output.label} is not available for this file.`;
+  }
+
+  if (output.kind === "svg-raster" && !["svg"].includes(extension(item.file.name))) {
+    return `${output.label} is not available for this file.`;
+  }
+
+  if (output.kind === "archive") {
+    if (output.requiresNativeEncoder) {
+      return `${output.label} is not available for this file.`;
+    }
+    if (["gz", "tgz"].includes(output.value) && !canGzip()) {
+      return "GZIP is not available for this file.";
+    }
+  }
+
   if (output.kind === "gif-video" && !pickVideoRecorderMime(output.value)) {
-    return `${output.label} is not available in this browser.`;
+    return `${output.label} is not available for this file.`;
   }
 
   if (output.kind === "video-gif" && !canPlayVideoFile(item.file)) {
-    return "This browser cannot read that video locally.";
+    return "That video file could not be read.";
   }
 
   if (output.kind === "media" && !canConvertMediaByExtension(item.file, output.value)) {
-    return `${output.label} is not available for this file in this browser.`;
+    return `${output.label} is not available for this file.`;
   }
 
   return "";
+}
+
+function canConvertModelByExtension(file, outputValue) {
+  const ext = extension(file.name);
+  if (ext === outputValue) return true;
+  if (ext === "obj") return outputValue === "stl";
+  if (ext === "stl") return outputValue === "obj";
+  if (ext === "gltf") return outputValue === "glb";
+  if (ext === "glb") return outputValue === "gltf";
+  return false;
 }
 
 function canConvertMediaByExtension(file, outputValue) {
@@ -567,6 +1193,49 @@ function mimeFromExtension(ext) {
 
 function mimeForExtension(ext) {
   return ({
+    zip: "application/zip",
+    rar: "application/vnd.rar",
+    "7z": "application/x-7z-compressed",
+    gz: "application/gzip",
+    gzip: "application/gzip",
+    tgz: "application/gzip",
+    tar: "application/x-tar",
+    bz2: "application/x-bzip2",
+    xz: "application/x-xz",
+    zst: "application/zstd",
+    br: "application/x-brotli",
+    lz: "application/x-lzip",
+    lzma: "application/x-lzma",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    txt: "text/plain",
+    md: "text/markdown",
+    markdown: "text/markdown",
+    html: "text/html",
+    htm: "text/html",
+    epub: "application/epub+zip",
+    mobi: "application/x-mobipocket-ebook",
+    azw3: "application/vnd.amazon.ebook",
+    json: "application/json",
+    yaml: "application/yaml",
+    yml: "application/yaml",
+    csv: "text/csv",
+    tsv: "text/tab-separated-values",
+    xml: "application/xml",
+    vcf: "text/vcard",
+    ics: "text/calendar",
+    env: "text/plain",
+    svg: "image/svg+xml",
+    ico: "image/x-icon",
+    ttf: "font/ttf",
+    otf: "font/otf",
+    woff: "font/woff",
+    woff2: "font/woff2",
+    obj: "model/obj",
+    stl: "model/stl",
+    gltf: "model/gltf+json",
+    glb: "model/gltf-binary",
+    css: "text/css",
+    js: "text/javascript",
     mp3: "audio/mpeg",
     wav: "audio/wav",
     aac: "audio/aac",
@@ -583,10 +1252,19 @@ function mimeForExtension(ext) {
 
 function inferFileKind(file) {
   const ext = extension(file.name);
+  if (["json", "yaml", "yml", "csv", "tsv", "xml", "vcf", "ics", "env"].includes(ext)) return "data";
+  if (["docx", "txt", "md", "markdown", "html", "htm"].includes(ext)) return "document";
+  if (["epub", "mobi", "azw3"].includes(ext)) return "ebook";
+  if (ext === "svg") return "vector";
+  if (["ttf", "otf", "woff", "woff2"].includes(ext)) return "font";
+  if (["obj", "stl", "gltf", "glb"].includes(ext)) return "model3d";
+  if (["css", "js"].includes(ext)) return "code";
+  if (isArchiveExtension(ext)) return "archive";
+  if (isArchiveMime(file.type)) return "archive";
   if (["heic", "heif"].includes(ext) || /hei[cf]/i.test(file.type)) return "heic";
   if (ext === "pdf" || file.type === "application/pdf") return "pdf";
   if (ext === "gif" || file.type === "image/gif") return "gif";
-  if (file.type.startsWith("image/")) return "image";
+  if (file.type.startsWith("image/") || ext === "ico") return "image";
   if (ext === "mp4" || file.type === "video/mp4") return "video";
   if (file.type.startsWith("video/") || ["mov", "mkv", "webm", "ts"].includes(ext)) return "video";
   if (file.type.startsWith("audio/") || ["mp3", "wav", "aac", "flac", "ogg", "m4a"].includes(ext)) return "audio";
@@ -595,6 +1273,14 @@ function inferFileKind(file) {
 
 function fileKindLabel(kind) {
   return ({
+    archive: "Archive",
+    document: "Document",
+    data: "Data",
+    ebook: "Ebook",
+    vector: "Vector",
+    font: "Font",
+    model3d: "3D model",
+    code: "Code",
     heic: "HEIC image",
     image: "Image",
     gif: "GIF",
@@ -603,6 +1289,43 @@ function fileKindLabel(kind) {
     audio: "Audio",
     unknown: "Unsupported"
   })[kind] || "File";
+}
+
+function isArchiveExtension(ext) {
+  return [
+    "zip",
+    "rar",
+    "7z",
+    "gz",
+    "gzip",
+    "tgz",
+    "tar",
+    "bz2",
+    "xz",
+    "zst",
+    "br",
+    "lz",
+    "lzma"
+  ].includes(ext);
+}
+
+function isArchiveMime(type) {
+  return [
+    "application/zip",
+    "application/x-zip-compressed",
+    "application/vnd.rar",
+    "application/x-rar-compressed",
+    "application/x-7z-compressed",
+    "application/gzip",
+    "application/x-gzip",
+    "application/x-tar",
+    "application/x-bzip2",
+    "application/x-xz",
+    "application/zstd",
+    "application/x-brotli",
+    "application/x-lzip",
+    "application/x-lzma"
+  ].includes(type);
 }
 
 function statusClass(status) {
@@ -669,7 +1392,7 @@ function encodeWav(audioBuffer) {
 async function encodeMp3(audioBuffer) {
   const Mp3Encoder = await getMp3EncoderCtor();
   if (!Mp3Encoder) {
-    throw new Error("This browser cannot create MP3 locally.");
+    throw new Error("MP3 is not available for this file.");
   }
 
   const channelCount = Math.min(2, audioBuffer.numberOfChannels);
@@ -694,11 +1417,52 @@ async function encodeMp3(audioBuffer) {
 }
 
 function getMp3EncoderCtor() {
-  mp3EncoderCtorPromise ||= import("lamejs/lame.all.js?raw").then((module) => {
+  mp3EncoderCtorPromise ||= loadLameRaw().then((module) => {
     const loadLame = new Function(`${module.default}\nreturn lamejs;`);
     return loadLame().Mp3Encoder;
   });
   return mp3EncoderCtorPromise;
+}
+
+function loadHeic2Any() {
+  lazyModules.heic2any ||= import("heic2any");
+  return lazyModules.heic2any;
+}
+
+function loadPdfLib() {
+  lazyModules.pdfLib ||= import("pdf-lib");
+  return lazyModules.pdfLib;
+}
+
+function loadMediabunny() {
+  lazyModules.mediabunny ||= import("mediabunny");
+  return lazyModules.mediabunny;
+}
+
+function loadGifuct() {
+  lazyModules.gifuct ||= import("gifuct-js");
+  return lazyModules.gifuct;
+}
+
+function loadGifenc() {
+  lazyModules.gifenc ||= import("gifenc");
+  return lazyModules.gifenc;
+}
+
+function loadLameRaw() {
+  lazyModules.lameRaw ||= import("lamejs/lame.all.js?raw");
+  return lazyModules.lameRaw;
+}
+
+async function loadPdfJs() {
+  lazyModules.pdfJs ||= Promise.all([
+    import("pdfjs-dist/build/pdf.mjs"),
+    import("pdfjs-dist/build/pdf.worker.mjs?url")
+  ]).then(([pdfjs, worker]) => {
+    pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+    return pdfjs;
+  });
+  return lazyModules.pdfJs;
 }
 
 function floatToInt16(samples) {
@@ -714,6 +1478,18 @@ function writeAscii(view, offset, value) {
   for (let index = 0; index < value.length; index += 1) {
     view.setUint8(offset + index, value.charCodeAt(index));
   }
+}
+
+function writeBytes(target, offset, bytes) {
+  target.set(bytes, offset);
+}
+
+function writeOctal(target, offset, length, value) {
+  const octal = value.toString(8).padStart(length - 1, "0").slice(-(length - 1));
+  for (let index = 0; index < octal.length; index += 1) {
+    target[offset + index] = octal.charCodeAt(index);
+  }
+  target[offset + length - 1] = 0;
 }
 
 function createDownloadLink(download) {
@@ -789,6 +1565,63 @@ async function createZip(downloads) {
   return new Blob([...chunks, ...centralDirectory, endRecord], { type: "application/zip" });
 }
 
+async function createTar(downloads) {
+  const chunks = [];
+  const usedNames = new Map();
+
+  for (const download of downloads) {
+    const filename = uniqueArchiveName(download.filename, usedNames);
+    const data = new Uint8Array(await download.blob.arrayBuffer());
+    chunks.push(createTarHeader(filename, data.length), data, tarPadding(data.length));
+  }
+
+  chunks.push(new Uint8Array(1024));
+  return new Blob(chunks, { type: "application/x-tar" });
+}
+
+function createTarHeader(filename, size) {
+  const encoder = new TextEncoder();
+  const nameBytes = encoder.encode(filename);
+  if (nameBytes.length > 100) {
+    throw new Error("That filename is too long for a TAR archive.");
+  }
+
+  const header = new Uint8Array(512);
+  const now = Math.floor(Date.now() / 1000);
+  writeBytes(header, 0, nameBytes);
+  writeOctal(header, 100, 8, 0o644);
+  writeOctal(header, 108, 8, 0);
+  writeOctal(header, 116, 8, 0);
+  writeOctal(header, 124, 12, size);
+  writeOctal(header, 136, 12, now);
+  header.fill(0x20, 148, 156);
+  header[156] = "0".charCodeAt(0);
+  writeBytes(header, 257, encoder.encode("ustar"));
+  writeBytes(header, 263, encoder.encode("00"));
+
+  const checksum = header.reduce((total, value) => total + value, 0);
+  writeOctal(header, 148, 8, checksum);
+  return header;
+}
+
+function tarPadding(size) {
+  const remainder = size % 512;
+  return new Uint8Array(remainder ? 512 - remainder : 0);
+}
+
+async function gzipBlob(blob) {
+  if (!canGzip()) {
+    throw new Error("GZIP is not available for this file.");
+  }
+
+  const stream = blob.stream().pipeThrough(new CompressionStream("gzip"));
+  return new Blob([await new Response(stream).arrayBuffer()], { type: "application/gzip" });
+}
+
+function canGzip() {
+  return typeof CompressionStream === "function";
+}
+
 function createLocalZipHeader({ nameBytes, crc, size, time, date }) {
   const header = new Uint8Array(30 + nameBytes.length);
   const view = new DataView(header.buffer);
@@ -822,6 +1655,10 @@ function createCentralZipHeader({ nameBytes, crc, size, time, date, offset }) {
 }
 
 function uniqueZipName(filename, usedNames) {
+  return uniqueArchiveName(filename, usedNames);
+}
+
+function uniqueArchiveName(filename, usedNames) {
   const safeName = (filename || "converted").replace(/[\\/]/g, "-");
   const root = baseName(safeName);
   const ext = extension(safeName);
@@ -890,7 +1727,7 @@ function extension(name) {
 }
 
 function extensionForMime(mime) {
-  return ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" })[mime] || "bin";
+  return ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/x-icon": "ico" })[mime] || "bin";
 }
 
 function isHeic(file) {

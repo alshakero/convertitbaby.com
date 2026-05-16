@@ -17,6 +17,7 @@ const outputsByKind = {
     { label: "JPG", value: "image/jpeg", extension: ".jpg" },
     { label: "PNG", value: "image/png", extension: ".png" },
     { label: "WebP", value: "image/webp", extension: ".webp" },
+    { label: "ICO", value: "ico", extension: ".ico" },
     { label: "PDF", value: "pdf", extension: ".pdf" }
   ],
   gif: [
@@ -45,6 +46,58 @@ const outputsByKind = {
     { label: "AAC", value: "aac", extension: ".aac" },
     { label: "FLAC", value: "flac", extension: ".flac" },
     { label: "Ogg", value: "ogg", extension: ".ogg" }
+  ],
+  archive: [
+    { label: "ZIP archive", value: "zip", extension: ".zip" },
+    { label: "TAR archive", value: "tar", extension: ".tar" },
+    { label: "TGZ archive", value: "tgz", extension: ".tgz" },
+    { label: "GZIP file", value: "gz", extension: ".gz" },
+    { label: "7Z archive", value: "7z", extension: ".7z" },
+    { label: "RAR archive", value: "rar", extension: ".rar" },
+    { label: "BZIP2 file", value: "bz2", extension: ".bz2" },
+    { label: "XZ file", value: "xz", extension: ".xz" },
+    { label: "Zstandard file", value: "zst", extension: ".zst" },
+    { label: "Brotli file", value: "br", extension: ".br" }
+  ],
+  document: [
+    { label: "PDF", value: "pdf", extension: ".pdf" },
+    { label: "HTML", value: "html", extension: ".html" },
+    { label: "TXT", value: "txt", extension: ".txt" }
+  ],
+  data: [
+    { label: "JSON", value: "json", extension: ".json" },
+    { label: "YAML", value: "yaml", extension: ".yaml" },
+    { label: "CSV", value: "csv", extension: ".csv" },
+    { label: "TSV", value: "tsv", extension: ".tsv" },
+    { label: "XML", value: "xml", extension: ".xml" }
+  ],
+  ebook: [
+    { label: "HTML", value: "html", extension: ".html" },
+    { label: "TXT", value: "txt", extension: ".txt" },
+    { label: "PDF", value: "pdf", extension: ".pdf" },
+    { label: "MOBI", value: "mobi", extension: ".mobi" },
+    { label: "AZW3", value: "azw3", extension: ".azw3" }
+  ],
+  vector: [
+    { label: "PNG", value: "png", extension: ".png" },
+    { label: "WebP", value: "webp", extension: ".webp" },
+    { label: "PDF", value: "pdf", extension: ".pdf" }
+  ],
+  font: [
+    { label: "TTF", value: "ttf", extension: ".ttf" },
+    { label: "OTF", value: "otf", extension: ".otf" },
+    { label: "WOFF", value: "woff", extension: ".woff" },
+    { label: "WOFF2", value: "woff2", extension: ".woff2" }
+  ],
+  model3d: [
+    { label: "OBJ", value: "obj", extension: ".obj" },
+    { label: "STL", value: "stl", extension: ".stl" },
+    { label: "GLTF", value: "gltf", extension: ".gltf" },
+    { label: "GLB", value: "glb", extension: ".glb" }
+  ],
+  code: [
+    { label: "Pretty", value: "pretty", extension: null },
+    { label: "Minified", value: "min", extension: null }
   ]
 };
 
@@ -81,9 +134,10 @@ for (const fixture of manifest.sources) {
       const filenames = await links.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("download")));
 
       expect(filenames.length).toBeGreaterThan(0);
+      const expectedExtension = output.extension || path.extname(fixture.path);
       for (const filename of filenames) {
         expect(filename).toBeTruthy();
-        expect(filename.toLowerCase()).toMatch(new RegExp(`${escapeRegExp(output.extension)}$`));
+        expect(filename.toLowerCase()).toMatch(new RegExp(`${escapeRegExp(expectedExtension)}$`));
       }
     });
   }

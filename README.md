@@ -9,6 +9,10 @@ A private file converter for GitHub Pages.
 - Audio and video conversion across popular formats.
 - GIF to WebM or MP4, and MP4 or other short video clips to GIF.
 - PDF pages to PNG and multiple images to a PDF.
+- Archive/compression handling for ZIP, TAR, TGZ, GZIP, plus recognition of RAR, 7Z, BZ2, XZ, Zstandard, Brotli, LZ, and LZMA files.
+- Document and ebook conversion for DOCX, TXT, Markdown, HTML, and EPUB.
+- Data conversion between JSON, YAML, CSV, TSV, XML, vCard, iCal, and env-style files.
+- SVG raster/PDF export, ICO creation, focused font and 3D model handling, and code pretty/minify outputs.
 - Batch intake: drop files first, choose an output per file, and convert files in parallel.
 - SEO metadata, sitemap, robots file, and GitHub Pages `CNAME`.
 - No remote code modules in the deployed app. Build output loads local files from `dist/assets`.

@@ -15,6 +15,45 @@ This directory contains one compact fixture for every source extension the app c
 - `audio/flac`
 - `audio/ogg`
 - `audio/m4a`
+- `archive/zip`
+- `archive/rar`
+- `archive/7z`
+- `archive/gz`
+- `archive/gzip`
+- `archive/tgz`
+- `archive/tar`
+- `archive/bz2`
+- `archive/xz`
+- `archive/zst`
+- `archive/br`
+- `archive/lz`
+- `archive/lzma`
+- `document/docx`
+- `document/txt`
+- `document/md`
+- `document/html`
+- `data/json`
+- `data/yaml`
+- `data/csv`
+- `data/tsv`
+- `data/xml`
+- `data/vcf`
+- `data/ics`
+- `data/env`
+- `ebook/epub`
+- `ebook/mobi`
+- `ebook/azw3`
+- `vector/svg`
+- `font/ttf`
+- `font/otf`
+- `font/woff`
+- `font/woff2`
+- `model/obj`
+- `model/stl`
+- `model/gltf`
+- `model/glb`
+- `code/css`
+- `code/js`
 - `video/mp4`
 - `video/mov`
 - `video/mkv`
@@ -30,3 +69,6 @@ The fixtures are intentionally tiny so the full conversion matrix can run in a r
 - HEIC and HEIF were derived locally from the PNG seed with ImageMagick.
 - AAC, FLAC, Ogg, and M4A were derived locally from the MP3 seed with FFmpeg.
 - MOV, MKV, and TS were derived locally from the MP4 and MP3 seeds with FFmpeg.
+- Archive fixtures are tiny synthetic files used to verify extension recognition and local container generation.
+- DOCX, EPUB, GLB, OBJ, STL, SVG, document, data, and code fixtures are compact valid files generated locally for the conversion matrix.
+- TTF and OTF fixtures are copied from local system fonts. WOFF and WOFF2 fixtures are compact format-recognition files used only for same-format copy checks.

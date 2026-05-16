@@ -107,6 +107,240 @@
       "path": "video/ts/sample.ts",
       "kind": "video",
       "source": "Derived from https://samplelib.com/sample-mp4.html and https://samplelib.com/sample-mp3.html"
+    },
+    {
+      "id": "zip",
+      "path": "archive/zip/sample.zip",
+      "kind": "archive",
+      "source": "Synthetic compact archive-format fixture"
+    },
+    {
+      "id": "rar",
+      "path": "archive/rar/sample.rar",
+      "kind": "archive",
+      "source": "Synthetic compact archive-format fixture"
+    },
+    {
+      "id": "7z",
+      "path": "archive/7z/sample.7z",
+      "kind": "archive",
+      "source": "Synthetic compact archive-format fixture"
+    },
+    {
+      "id": "gz",
+      "path": "archive/gz/sample.gz",
+      "kind": "archive",
+      "source": "Synthetic compact archive-format fixture"
+    },
+    {
+      "id": "gzip",
+      "path": "archive/gzip/sample.gzip",
+      "kind": "archive",
+      "source": "Synthetic compact archive-format fixture"
+    },
+    {
+      "id": "tgz",
+      "path": "archive/tgz/sample.tgz",
+      "kind": "archive",
+      "source": "Synthetic compact archive-format fixture"
+    },
+    {
+      "id": "tar",
+      "path": "archive/tar/sample.tar",
+      "kind": "archive",
+      "source": "Synthetic compact archive-format fixture"
+    },
+    {
+      "id": "bz2",
+      "path": "archive/bz2/sample.bz2",
+      "kind": "archive",
+      "source": "Synthetic compact archive-format fixture"
+    },
+    {
+      "id": "xz",
+      "path": "archive/xz/sample.xz",
+      "kind": "archive",
+      "source": "Synthetic compact archive-format fixture"
+    },
+    {
+      "id": "zst",
+      "path": "archive/zst/sample.zst",
+      "kind": "archive",
+      "source": "Synthetic compact archive-format fixture"
+    },
+    {
+      "id": "br",
+      "path": "archive/br/sample.br",
+      "kind": "archive",
+      "source": "Synthetic compact archive-format fixture"
+    },
+    {
+      "id": "lz",
+      "path": "archive/lz/sample.lz",
+      "kind": "archive",
+      "source": "Synthetic compact archive-format fixture"
+    },
+    {
+      "id": "lzma",
+      "path": "archive/lzma/sample.lzma",
+      "kind": "archive",
+      "source": "Synthetic compact archive-format fixture"
+    },
+    {
+      "id": "docx",
+      "path": "document/docx/sample.docx",
+      "kind": "document",
+      "source": "Synthetic valid DOCX fixture"
+    },
+    {
+      "id": "txt",
+      "path": "document/txt/sample.txt",
+      "kind": "document",
+      "source": "Synthetic text fixture"
+    },
+    {
+      "id": "md",
+      "path": "document/md/sample.md",
+      "kind": "document",
+      "source": "Synthetic Markdown fixture"
+    },
+    {
+      "id": "html",
+      "path": "document/html/sample.html",
+      "kind": "document",
+      "source": "Synthetic HTML fixture"
+    },
+    {
+      "id": "json",
+      "path": "data/json/sample.json",
+      "kind": "data",
+      "source": "Synthetic JSON fixture"
+    },
+    {
+      "id": "yaml",
+      "path": "data/yaml/sample.yaml",
+      "kind": "data",
+      "source": "Synthetic YAML fixture"
+    },
+    {
+      "id": "csv",
+      "path": "data/csv/sample.csv",
+      "kind": "data",
+      "source": "Synthetic CSV fixture"
+    },
+    {
+      "id": "tsv",
+      "path": "data/tsv/sample.tsv",
+      "kind": "data",
+      "source": "Synthetic TSV fixture"
+    },
+    {
+      "id": "xml",
+      "path": "data/xml/sample.xml",
+      "kind": "data",
+      "source": "Synthetic XML fixture"
+    },
+    {
+      "id": "vcf",
+      "path": "data/vcf/sample.vcf",
+      "kind": "data",
+      "source": "Synthetic vCard fixture"
+    },
+    {
+      "id": "ics",
+      "path": "data/ics/sample.ics",
+      "kind": "data",
+      "source": "Synthetic iCalendar fixture"
+    },
+    {
+      "id": "env",
+      "path": "data/env/sample.env",
+      "kind": "data",
+      "source": "Synthetic env fixture"
+    },
+    {
+      "id": "epub",
+      "path": "ebook/epub/sample.epub",
+      "kind": "ebook",
+      "source": "Synthetic valid EPUB fixture"
+    },
+    {
+      "id": "mobi",
+      "path": "ebook/mobi/sample.mobi",
+      "kind": "ebook",
+      "source": "Synthetic MOBI-like fixture"
+    },
+    {
+      "id": "azw3",
+      "path": "ebook/azw3/sample.azw3",
+      "kind": "ebook",
+      "source": "Synthetic AZW3-like fixture"
+    },
+    {
+      "id": "svg",
+      "path": "vector/svg/sample.svg",
+      "kind": "vector",
+      "source": "Synthetic SVG fixture"
+    },
+    {
+      "id": "ttf",
+      "path": "font/ttf/sample.ttf",
+      "kind": "font",
+      "source": "Synthetic compact font fixture"
+    },
+    {
+      "id": "otf",
+      "path": "font/otf/sample.otf",
+      "kind": "font",
+      "source": "Synthetic compact font fixture"
+    },
+    {
+      "id": "woff",
+      "path": "font/woff/sample.woff",
+      "kind": "font",
+      "source": "Synthetic compact font fixture"
+    },
+    {
+      "id": "woff2",
+      "path": "font/woff2/sample.woff2",
+      "kind": "font",
+      "source": "Synthetic compact font fixture"
+    },
+    {
+      "id": "obj",
+      "path": "model/obj/sample.obj",
+      "kind": "model3d",
+      "source": "Synthetic OBJ fixture"
+    },
+    {
+      "id": "stl",
+      "path": "model/stl/sample.stl",
+      "kind": "model3d",
+      "source": "Synthetic STL fixture"
+    },
+    {
+      "id": "gltf",
+      "path": "model/gltf/sample.gltf",
+      "kind": "model3d",
+      "source": "Synthetic GLTF fixture"
+    },
+    {
+      "id": "glb",
+      "path": "model/glb/sample.glb",
+      "kind": "model3d",
+      "source": "Synthetic GLB fixture"
+    },
+    {
+      "id": "css",
+      "path": "code/css/sample.css",
+      "kind": "code",
+      "source": "Synthetic CSS fixture"
+    },
+    {
+      "id": "js",
+      "path": "code/js/sample.js",
+      "kind": "code",
+      "source": "Synthetic JavaScript fixture"
     }
   ]
 }
