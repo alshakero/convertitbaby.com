@@ -1,0 +1,26 @@
+{
+  "name": "convertitbaby",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "npm run test:conversions",
+    "test:conversions": "playwright test"
+  },
+  "dependencies": {
+    "gifenc": "1.0.3",
+    "gifuct-js": "2.1.2",
+    "heic2any": "0.0.4",
+    "lamejs": "^1.2.1",
+    "mediabunny": "1.13.0",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "4.10.38"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "vite": "latest"
+  }
+}

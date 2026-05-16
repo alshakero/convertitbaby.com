@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>convertitbaby.com - Private, Free File Converter</title>
+    <meta name="description" content="Convert HEIC to JPG or PNG, media files, GIFs, PDFs, and images privately. Files never upload anywhere.">
+    <meta name="robots" content="index,follow">
+    <meta name="theme-color" content="#101820">
+    <link rel="canonical" href="https://convertitbaby.com/">
+    <meta property="og:title" content="convertitbaby.com">
+    <meta property="og:description" content="A free private file converter that starts with your files.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://convertitbaby.com/">
+    <meta property="og:image" content="https://convertitbaby.com/logo.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" href="/logo.png" type="image/png">
+    <link rel="apple-touch-icon" href="/logo.png">
+    <link rel="stylesheet" href="styles.css">
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "convertitbaby.com",
+        "url": "https://convertitbaby.com/",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Any modern device",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "description": "A free private file converter that works without uploading user files."
+      }
+    </script>
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav" aria-label="Primary">
+        <a class="brand" href="/" aria-label="convertitbaby.com home">
+          <img class="brand-mark" src="/logo.png" alt="" aria-hidden="true">
+          <span>convertitbaby.com</span>
+        </a>
+        <div class="nav-links">
+          <a href="#convert">Convert</a>
+          <a href="#formats">Formats</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="converter-shell" id="convert" aria-labelledby="convert-title">
+        <div class="intake-layout">
+          <section class="intake-primary">
+            <p class="eyebrow">Free, private, no limits</p>
+            <h1 id="convert-title">Drop files. Pick outputs. Go.</h1>
+            <p class="lede">Add as many files as you want. Nothing uploads, so conversion starts immediately on your device.</p>
+
+            <label class="dropzone">
+              <input id="file-input" type="file" multiple accept="image/*,audio/*,video/*,application/pdf,.heic,.heif,.mkv,.mov,.m4a,.aac,.flac,.ogg,.ts">
+              <span class="drop-title">Drop files here or choose files</span>
+              <span class="drop-meta">Images, HEIC, GIF, PDF, audio, and video</span>
+            </label>
+          </section>
+
+          <aside class="support-panel" id="formats" aria-labelledby="formats-title">
+            <p class="eyebrow">Supported files</p>
+            <h2 id="formats-title">We detect each file and show the outputs that make sense.</h2>
+            <div class="support-grid">
+              <article><h3>Images</h3><p>HEIC, HEIF, JPG, PNG, WebP, and GIF stills to JPG, PNG, WebP, or PDF.</p></article>
+              <article><h3>GIF & video</h3><p>GIF to WebM or MP4. MP4 and other short clips to GIF.</p></article>
+              <article><h3>Media</h3><p>Audio and video formats are detected automatically. Outputs this browser can create stay selectable; the rest stay visible but disabled.</p></article>
+              <article><h3>PDF</h3><p>PDF pages to PNG. Images can also become PDF files.</p></article>
+            </div>
+          </aside>
+        </div>
+
+        <section class="queue-panel" aria-labelledby="queue-title">
+          <div class="queue-header">
+            <div>
+              <p class="eyebrow">File queue</p>
+              <h2 id="queue-title">Choose outputs for each file</h2>
+            </div>
+            <div class="queue-actions">
+              <button class="button secondary" type="button" id="clear-button" disabled>Clear</button>
+              <button class="button primary" type="button" id="go-button" disabled>Go</button>
+            </div>
+          </div>
+
+          <div class="progress" hidden>
+            <span class="progress-bar"></span>
+          </div>
+          <p class="status" aria-live="polite">Drop files to begin.</p>
+          <p class="empty-queue">Your files will appear here with an output menu for each one.</p>
+          <ul class="file-queue" aria-live="polite"></ul>
+        </section>
+
+        <section class="results" aria-label="Batch download">
+          <button class="button secondary" type="button" id="download-all-button" disabled>Download all</button>
+        </section>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>convertitbaby.com keeps conversion private. Files are never uploaded anyways.</p>
+    </footer>
+
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>

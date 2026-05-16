@@ -1,0 +1,112 @@
+{
+  "sources": [
+    {
+      "id": "jpg",
+      "path": "image/jpg/sample.jpg",
+      "kind": "image",
+      "source": "https://samplelib.com/sample-jpeg.html"
+    },
+    {
+      "id": "png",
+      "path": "image/png/sample.png",
+      "kind": "image",
+      "source": "https://samplelib.com/sample-png.html"
+    },
+    {
+      "id": "webp",
+      "path": "image/webp/sample.webp",
+      "kind": "image",
+      "source": "https://samplelib.com/sample-webp.html"
+    },
+    {
+      "id": "heic",
+      "path": "image/heic/sample.heic",
+      "kind": "heic",
+      "source": "Derived from https://samplelib.com/sample-png.html"
+    },
+    {
+      "id": "heif",
+      "path": "image/heif/sample.heif",
+      "kind": "heic",
+      "source": "Derived from https://samplelib.com/sample-png.html"
+    },
+    {
+      "id": "gif",
+      "path": "animation/gif/sample.gif",
+      "kind": "gif",
+      "source": "https://samplelib.com/sample-gif.html"
+    },
+    {
+      "id": "pdf",
+      "path": "document/pdf/sample.pdf",
+      "kind": "pdf",
+      "source": "https://www.fileexamples.com/files/sample_report.pdf"
+    },
+    {
+      "id": "mp3",
+      "path": "audio/mp3/sample.mp3",
+      "kind": "audio",
+      "source": "Derived from https://samplelib.com/sample-mp3.html"
+    },
+    {
+      "id": "wav",
+      "path": "audio/wav/sample.wav",
+      "kind": "audio",
+      "source": "Derived from https://samplelib.com/sample-mp3.html"
+    },
+    {
+      "id": "aac",
+      "path": "audio/aac/sample.aac",
+      "kind": "audio",
+      "source": "Derived from https://samplelib.com/sample-mp3.html"
+    },
+    {
+      "id": "flac",
+      "path": "audio/flac/sample.flac",
+      "kind": "audio",
+      "source": "Derived from https://samplelib.com/sample-mp3.html"
+    },
+    {
+      "id": "ogg",
+      "path": "audio/ogg/sample.ogg",
+      "kind": "audio",
+      "source": "Derived from https://samplelib.com/sample-mp3.html"
+    },
+    {
+      "id": "m4a",
+      "path": "audio/m4a/sample.m4a",
+      "kind": "audio",
+      "source": "Derived from https://samplelib.com/sample-mp3.html"
+    },
+    {
+      "id": "mp4",
+      "path": "video/mp4/sample.mp4",
+      "kind": "video",
+      "source": "Derived from https://samplelib.com/sample-mp4.html and https://samplelib.com/sample-mp3.html"
+    },
+    {
+      "id": "mov",
+      "path": "video/mov/sample.mov",
+      "kind": "video",
+      "source": "Derived from https://samplelib.com/sample-mp4.html and https://samplelib.com/sample-mp3.html"
+    },
+    {
+      "id": "mkv",
+      "path": "video/mkv/sample.mkv",
+      "kind": "video",
+      "source": "Derived from https://samplelib.com/sample-mp4.html and https://samplelib.com/sample-mp3.html"
+    },
+    {
+      "id": "webm",
+      "path": "video/webm/sample.webm",
+      "kind": "video",
+      "source": "Derived from https://samplelib.com/sample-mp4.html and https://samplelib.com/sample-mp3.html"
+    },
+    {
+      "id": "ts",
+      "path": "video/ts/sample.ts",
+      "kind": "video",
+      "source": "Derived from https://samplelib.com/sample-mp4.html and https://samplelib.com/sample-mp3.html"
+    }
+  ]
+}
