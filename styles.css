@@ -121,6 +121,18 @@ h1 {
   line-height: 1.45;
 }
 
+.format-count {
+  width: fit-content;
+  margin: 0 0 18px;
+  border: 1px solid rgba(12, 138, 125, 0.22);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(12, 138, 125, 0.08);
+  color: #285c57;
+  font-size: 15px;
+  font-weight: 900;
+}
+
 .dropzone {
   min-height: clamp(280px, 42vh, 520px);
   border: 1.5px dashed #8fa39a;
@@ -366,6 +378,11 @@ select {
 .footer {
   padding: 28px clamp(18px, 4vw, 56px) 42px;
   text-align: center;
+}
+
+.footer a {
+  color: var(--teal);
+  font-weight: 900;
 }
 
 @media (max-width: 980px) {
