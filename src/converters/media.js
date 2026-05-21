@@ -23,6 +23,10 @@ import {
   writeAscii,
 } from "../lib/utils.js";
 
+const COMPRESSED_PDF_MAX_EDGE = 1600;
+const COMPRESSED_PDF_MAX_SCALE = 2;
+const COMPRESSED_PDF_JPEG_QUALITY = 0.68;
+
 export async function convertSvgToRaster(file, outputValue) {
   const image = await loadImageFromBlob(file);
   const canvas = document.createElement("canvas");
@@ -302,6 +306,66 @@ export async function convertVideoToGif(file) {
   };
 }
 
+export async function compressPdfFile(file) {
+  const [pdfjs, { PDFDocument }] = await Promise.all([
+    loadPdfJs(),
+    loadPdfLib(),
+  ]);
+  const originalBytes = await file.arrayBuffer();
+  const sourcePdf = await pdfjs.getDocument({ data: originalBytes.slice(0) })
+    .promise;
+  if (!sourcePdf.numPages) throw new Error("Could not find pages in that PDF.");
+
+  const outputPdf = await PDFDocument.create();
+
+  for (let pageNumber = 1; pageNumber <= sourcePdf.numPages; pageNumber += 1) {
+    const sourcePage = await sourcePdf.getPage(pageNumber);
+    const baseViewport = sourcePage.getViewport({ scale: 1 });
+    const scale = compressedPdfScale(baseViewport.width, baseViewport.height);
+    const viewport = sourcePage.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.floor(viewport.width));
+    canvas.height = Math.max(1, Math.floor(viewport.height));
+    const ctx = canvas.getContext("2d", { alpha: false });
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    await sourcePage.render({ canvasContext: ctx, viewport }).promise;
+    const jpgBlob = await canvasToBlob(
+      canvas,
+      "image/jpeg",
+      COMPRESSED_PDF_JPEG_QUALITY,
+    );
+    const jpgImage = await outputPdf.embedJpg(await jpgBlob.arrayBuffer());
+    const outputPage = outputPdf.addPage([
+      baseViewport.width,
+      baseViewport.height,
+    ]);
+    outputPage.drawImage(jpgImage, {
+      x: 0,
+      y: 0,
+      width: baseViewport.width,
+      height: baseViewport.height,
+    });
+
+    sourcePage.cleanup();
+    canvas.width = 0;
+    canvas.height = 0;
+  }
+
+  const compressedBytes = await outputPdf.save({ useObjectStreams: true });
+  const bestBytes =
+    compressedBytes.byteLength < originalBytes.byteLength
+      ? compressedBytes
+      : originalBytes;
+
+  return {
+    blob: new Blob([bestBytes], { type: "application/pdf" }),
+    filename: `${baseName(file.name)}-compressed.pdf`,
+    mimeType: "application/pdf",
+  };
+}
+
 export async function pdfToPngFiles(file) {
   const pdfjs = await loadPdfJs();
   const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() })
@@ -324,6 +388,14 @@ export async function pdfToPngFiles(file) {
   }
 
   return downloads;
+}
+
+function compressedPdfScale(width, height) {
+  const edgeScale = Math.min(
+    COMPRESSED_PDF_MAX_EDGE / width,
+    COMPRESSED_PDF_MAX_EDGE / height,
+  );
+  return Math.max(0.1, Math.min(COMPRESSED_PDF_MAX_SCALE, edgeScale));
 }
 
 async function imageFileToPng(file) {

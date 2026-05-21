@@ -10,12 +10,24 @@ import { createDownload } from "./lib/downloads.js";
 import { setObjectUrlTracker } from "./lib/runtime.js";
 import { formatBytes } from "./lib/utils.js";
 
+let activeConversionEvents = null;
+const pendingConversionEvents = [];
+const conversionEvents = {
+  trackConversionBatch: (...args) =>
+    trackOptionalConversionEvent("trackConversionBatch", args),
+  trackConversionFailure: (...args) =>
+    trackOptionalConversionEvent("trackConversionFailure", args),
+  trackConversionSuccess: (...args) =>
+    trackOptionalConversionEvent("trackConversionSuccess", args),
+};
+
 const state = {
   items: [],
   urls: [],
   isConverting: false,
 };
 
+loadConversionEvents();
 setObjectUrlTracker((url) => state.urls.push(url));
 
 const fileInput = document.querySelector("#file-input");
@@ -55,33 +67,48 @@ downloadAllButton.addEventListener("click", downloadAll);
 window.addEventListener("beforeunload", warnBeforeLeavingDuringConversion);
 
 function addFiles(fileList) {
-  const newItems = [...fileList].map((file) => {
-    const kind = inferFileKind(file);
-    const outputs = getOutputOptions({ kind, file });
-    const defaultOutput = outputs.find((output) => !output.disabled);
-    return {
-      id: crypto.randomUUID(),
-      file,
-      kind,
-      output: defaultOutput?.value || outputs[0]?.value || "",
-      status: defaultOutput
-        ? "Ready"
-        : outputs.length
-          ? "Unavailable"
-          : "Unsupported",
-      downloads: [],
-    };
-  });
+  const files = [...(fileList || [])];
+  if (!files.length) {
+    fileInput.value = "";
+    setStatus("No files were selected. Try dragging the file in instead.");
+    return;
+  }
+
+  let newItems;
+  try {
+    newItems = files.map(createQueueItem);
+  } catch (error) {
+    console.error(error);
+    fileInput.value = "";
+    setStatus(error?.message || "Could not add that file.");
+    return;
+  }
 
   state.items.push(...newItems);
   fileInput.value = "";
   renderQueue();
   setStatus(
-    state.items.length
-      ? `${state.items.length} file${state.items.length === 1 ? "" : "s"} ready.`
-      : "Drop files to begin.",
+    `${newItems.length} file${newItems.length === 1 ? "" : "s"} added. ${state.items.length} file${state.items.length === 1 ? "" : "s"} in queue.`,
   );
   queuePanel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function createQueueItem(file) {
+  const kind = inferFileKind(file);
+  const outputs = getOutputOptions({ kind, file });
+  const defaultOutput = outputs.find((output) => !output.disabled);
+  return {
+    id: crypto.randomUUID(),
+    file,
+    kind,
+    output: defaultOutput?.value || outputs[0]?.value || "",
+    status: defaultOutput
+      ? "Ready"
+      : outputs.length
+        ? "Unavailable"
+        : "Unsupported",
+    downloads: [],
+  };
 }
 
 function renderQueue() {
@@ -172,6 +199,7 @@ async function convertAll() {
   setStatus(
     `Converting ${convertible.length} file${convertible.length === 1 ? "" : "s"}...`,
   );
+  const batchStartedAt = performance.now();
   let completed = 0;
 
   try {
@@ -183,14 +211,33 @@ async function convertAll() {
         revokeItemDownloads(item);
         renderQueue();
         const output = getSelectedOutput(item);
-        const downloads = await convertQueueItem(item.file, output);
-        item.downloads = downloads.map((download) =>
-          createDownload(download.blob, download.filename, download.mimeType),
-        );
-        item.status = "Done";
-        completed += 1;
-        setProgress(completed / convertible.length);
-        renderQueue();
+        const conversionStartedAt = performance.now();
+
+        try {
+          const downloads = await convertQueueItem(item.file, output);
+          item.downloads = downloads.map((download) =>
+            createDownload(download.blob, download.filename, download.mimeType),
+          );
+          item.status = "Done";
+          completed += 1;
+          conversionEvents.trackConversionSuccess({
+            file: item.file,
+            inputKind: item.kind,
+            output,
+            durationMs: performance.now() - conversionStartedAt,
+          });
+          setProgress(completed / convertible.length);
+          renderQueue();
+        } catch (error) {
+          conversionEvents.trackConversionFailure({
+            file: item.file,
+            inputKind: item.kind,
+            output,
+            durationMs: performance.now() - conversionStartedAt,
+            error,
+          });
+          throw error;
+        }
       }),
     );
 
@@ -204,6 +251,11 @@ async function convertAll() {
     const failed = results.filter(
       (result) => result.status === "rejected",
     ).length;
+    conversionEvents.trackConversionBatch({
+      conversionCount: convertible.length,
+      failureCount: failed,
+      durationMs: performance.now() - batchStartedAt,
+    });
     setProgress(1);
     setStatus(
       failed
@@ -332,4 +384,25 @@ function setProgress(value) {
     "--progress",
     `${Math.max(0, Math.min(100, value * 100))}%`,
   );
+}
+
+function loadConversionEvents() {
+  import("./lib/conversion-events.js")
+    .then((module) => {
+      activeConversionEvents = module;
+      pendingConversionEvents.splice(0).forEach(([name, args]) => {
+        module[name]?.(...args);
+      });
+    })
+    .catch(() => {
+      pendingConversionEvents.length = 0;
+    });
+}
+
+function trackOptionalConversionEvent(name, args) {
+  if (activeConversionEvents) {
+    activeConversionEvents[name]?.(...args);
+    return;
+  }
+  pendingConversionEvents.push([name, args]);
 }

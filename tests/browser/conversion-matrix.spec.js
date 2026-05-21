@@ -29,7 +29,10 @@ const outputsByKind = {
     { label: "JPG still", value: "image/jpeg", extension: ".jpg" },
     { label: "PNG still", value: "image/png", extension: ".png" },
   ],
-  pdf: [{ label: "PNG images", value: "png", extension: ".png" }],
+  pdf: [
+    { label: "Compressed PDF", value: "compressed-pdf", extension: ".pdf" },
+    { label: "PNG images", value: "png", extension: ".png" },
+  ],
   video: [
     { label: "GIF", value: "gif", extension: ".gif" },
     { label: "WebM", value: "webm", extension: ".webm" },
@@ -170,6 +173,21 @@ test("download all keeps a single converted file unzipped", async ({
   await expect(row.locator(".item-status")).toHaveText("Done", {
     timeout: 60_000,
   });
+  await expectConversionEvent(page, "file_conversion", {
+    conversion_kind: "image",
+    event_category: "conversion",
+    input_format: "png",
+    output_format: "jpg",
+    status: "success",
+    transport_type: "beacon",
+  });
+  await expectConversionEvent(page, "conversion_batch", {
+    conversion_count: 1,
+    event_category: "conversion",
+    failure_count: 0,
+    status: "success",
+    transport_type: "beacon",
+  });
 
   const downloadPromise = page.waitForEvent("download");
   await page.locator("#download-all-button").click();
@@ -178,6 +196,37 @@ test("download all keeps a single converted file unzipped", async ({
   expect(download.suggestedFilename().toLowerCase()).toMatch(/\.jpg$/);
   expect(download.suggestedFilename().toLowerCase()).not.toMatch(/\.zip$/);
   await expect(page.locator(".status")).toContainText("Downloaded sample.jpg.");
+});
+
+test("file picker accepts PDF files by extension", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.locator("#file-input")).toHaveAttribute(
+    "accept",
+    /(^|,)\.pdf(,|$)/,
+  );
+});
+
+test("converter works when analytics URLs are blocked", async ({ page }) => {
+  await page.route(
+    /analytics|conversion-events|googletagmanager|gtag/i,
+    (route) => route.abort(),
+  );
+  await page.goto("/");
+  await page.setInputFiles(
+    "#file-input",
+    path.join(fixtureRoot, "image/png/sample.png"),
+  );
+
+  const row = page.locator(".queue-item").first();
+  await expect(row).toContainText("sample.png");
+  await row.locator(".output-select").selectOption("image/jpeg");
+  await page.locator("#go-button").click();
+
+  await expect(row.locator(".item-status")).toHaveText("Done", {
+    timeout: 60_000,
+  });
+  await expect(page.locator(".status")).toContainText("Converted 1 file");
 });
 
 for (const fixture of manifest.sources) {
@@ -240,4 +289,19 @@ for (const fixture of manifest.sources) {
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function expectConversionEvent(page, eventName, expectedParams) {
+  const params = await page.evaluate((name) => {
+    const event = window.dataLayer
+      .map((entry) => Array.from(entry))
+      .find(([command, candidateName]) => {
+        return command === "event" && candidateName === name;
+      });
+
+    return event?.[2] || null;
+  }, eventName);
+
+  expect(params).toEqual(expect.objectContaining(expectedParams));
+  expect(params.duration_ms).toBeGreaterThanOrEqual(0);
 }

@@ -21,7 +21,10 @@ export const OUTPUTS = {
     { label: "JPG still", value: "image/jpeg", kind: "image" },
     { label: "PNG still", value: "image/png", kind: "image" },
   ],
-  pdf: [{ label: "PNG images", value: "png", kind: "pdf-png" }],
+  pdf: [
+    { label: "Compressed PDF", value: "compressed-pdf", kind: "pdf-compress" },
+    { label: "PNG images", value: "png", kind: "pdf-png" },
+  ],
   video: [
     { label: "GIF", value: "gif", kind: "video-gif" },
     { label: "WebM", value: "webm", kind: "media" },

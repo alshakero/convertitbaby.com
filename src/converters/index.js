@@ -10,6 +10,7 @@ import {
   convertImageFile,
   convertImageToIco,
   convertMediaFile,
+  compressPdfFile,
   convertSingleImageToPdf,
   convertSvgToPdf,
   convertSvgToRaster,
@@ -45,6 +46,8 @@ export async function convertQueueItem(file, output) {
       return [await convertGifToVideo(file, output.value)];
     case "video-gif":
       return [await convertVideoToGif(file)];
+    case "pdf-compress":
+      return [await compressPdfFile(file)];
     case "pdf-png":
       return pdfToPngFiles(file);
     case "media":
