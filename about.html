@@ -37,35 +37,45 @@
       gtag('config', 'G-DP893VZRWH');
     </script>
   </head>
-  <body>
+  <body data-page="about">
     <header class="site-header">
-      <nav class="nav" aria-label="Primary">
-        <a class="brand" href="/" aria-label="convertitbaby.com home">
+      <nav class="nav" aria-label="Primary" data-i18n-attrs="aria-label:nav.primary">
+        <a class="brand" href="/" aria-label="convertitbaby.com home" data-i18n-attrs="aria-label:nav.home">
           <img class="brand-mark" src="/logo.png" alt="" aria-hidden="true">
           <span>convertitbaby.com</span>
         </a>
         <div class="nav-links">
-          <a href="/about.html" aria-current="page">About</a>
-          <a href="https://github.com/alshakero/convertitbaby.com" rel="noopener noreferrer">Source code</a>
+          <a href="/about.html" aria-current="page" data-i18n="nav.about">About</a>
+          <a href="https://github.com/alshakero/convertitbaby.com" rel="noopener noreferrer" data-i18n="nav.source">Source code</a>
+          <label class="language-control">
+            <span class="visually-hidden" data-i18n="language.label">Language</span>
+            <select class="language-select" data-language-select aria-label="Language" data-i18n-attrs="aria-label:language.label">
+              <option value="en">English</option>
+              <option value="ar">العربية</option>
+              <option value="pl">Polski</option>
+              <option value="de">Deutsch</option>
+            </select>
+          </label>
         </div>
       </nav>
     </header>
 
     <main class="content-page">
       <article class="about-panel">
-        <p class="eyebrow">About</p>
-        <h1>Private file conversion, because files are personal.</h1>
-        <p class="lede">I always find myself converting files online, then immediately worrying about what happens to those files after upload. So I made convertitbaby.com as a privacy-oriented tool to fix that issue.</p>
-        <p>Conversion happens entirely in your browser. Your files are not uploaded to a server, so file conversion stays useful without making you hand over the file first.</p>
-        <p>Made by <a href="https://github.com/alshakero" rel="noopener noreferrer">@alshakero</a> in 2026.</p>
-        <p>Made in Poland with ❤️</p>
+        <p class="eyebrow" data-i18n="about.eyebrow">About</p>
+        <h1 data-i18n="about.title">Private file conversion, because files are personal.</h1>
+        <p class="lede" data-i18n="about.lede">I always find myself converting files online, then immediately worrying about what happens to those files after upload. So I made convertitbaby.com as a privacy-oriented tool to fix that issue.</p>
+        <p data-i18n="about.browser">Conversion happens entirely in your browser. Your files are not uploaded to a server, so file conversion stays useful without making you hand over the file first.</p>
+        <p><span data-i18n="about.madeByPrefix">Made by</span> <a href="https://github.com/alshakero" rel="noopener noreferrer">@alshakero</a> <span data-i18n="about.madeBySuffix">in 2026.</span></p>
+        <p data-i18n="footer.madeInPoland">Made in Poland with ❤️</p>
       </article>
     </main>
 
     <footer class="footer">
-      <p>convertitbaby.com keeps file, archive, and compression conversion private. Files are never uploaded anyways.</p>
-      <p>Made in Poland with ❤️</p>
-      <p><a href="https://github.com/alshakero/convertitbaby.com" rel="noopener noreferrer">View the source on GitHub</a></p>
+      <p data-i18n="footer.privacy">convertitbaby.com keeps file, archive, and compression conversion private. Files are never uploaded anyways.</p>
+      <p data-i18n="footer.madeInPoland">Made in Poland with ❤️</p>
+      <p><a href="https://github.com/alshakero/convertitbaby.com" rel="noopener noreferrer" data-i18n="footer.source">View the source on GitHub</a></p>
     </footer>
+    <script type="module" src="src/page-i18n.js"></script>
   </body>
 </html>

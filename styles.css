@@ -43,6 +43,16 @@ a {
   color: inherit;
 }
 
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .site-header {
   padding: 12px 16px;
   background: rgba(251, 250, 247, 0.82);
@@ -77,6 +87,7 @@ a {
 
 .nav-links {
   display: flex;
+  align-items: center;
   gap: 22px;
   color: var(--muted);
   font-size: 15px;
@@ -84,6 +95,22 @@ a {
 
 .nav-links a {
   text-decoration: none;
+}
+
+.language-control {
+  display: inline-flex;
+  align-items: center;
+}
+
+.language-select {
+  width: auto;
+  min-width: 126px;
+  min-height: 38px;
+  border-color: rgba(16, 24, 32, 0.18);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
 }
 
 main {
@@ -313,6 +340,7 @@ select:disabled {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  unicode-bidi: plaintext;
 }
 
 .file-info span,
@@ -412,6 +440,7 @@ select {
   background: white;
   text-decoration: none;
   font-weight: 900;
+  unicode-bidi: plaintext;
 }
 
 .footer {
@@ -491,6 +520,10 @@ select {
     gap: 12px;
     flex-wrap: wrap;
     justify-content: flex-end;
+  }
+
+  .language-select {
+    min-width: 112px;
   }
 
   .button,

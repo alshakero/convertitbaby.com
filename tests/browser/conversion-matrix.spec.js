@@ -157,6 +157,36 @@ const outputsByKind = {
   rawImage: [{ label: "Original", value: "original", extension: null }],
 };
 
+test("language selector translates static and queued UI", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("[data-language-select]").selectOption("ar");
+
+  await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await expect(page.locator("#convert-title")).toHaveText(
+    "أفلت الملفات. اختر الصيغ. وانطلق.",
+  );
+
+  await page.setInputFiles(
+    "#file-input",
+    path.join(fixtureRoot, "image/png/sample.png"),
+  );
+
+  const row = page.locator(".queue-item").first();
+  await expect(row.locator(".file-info span")).toContainText("صورة");
+  await expect(row.locator(".item-status")).toHaveText("جاهز");
+  await expect(row.locator(".output-select")).toHaveAttribute(
+    "aria-label",
+    /صيغة الإخراج/,
+  );
+
+  await page.reload();
+  await expect(page.locator("[data-language-select]")).toHaveValue("ar");
+  await expect(page.locator("#convert-title")).toHaveText(
+    "أفلت الملفات. اختر الصيغ. وانطلق.",
+  );
+});
+
 test("download all keeps a single converted file unzipped", async ({
   page,
 }) => {

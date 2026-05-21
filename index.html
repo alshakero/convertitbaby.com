@@ -49,16 +49,25 @@
       }
     </script>
   </head>
-  <body>
+  <body data-page="home">
     <header class="site-header">
-      <nav class="nav" aria-label="Primary">
-        <a class="brand" href="/" aria-label="convertitbaby.com home">
+      <nav class="nav" aria-label="Primary" data-i18n-attrs="aria-label:nav.primary">
+        <a class="brand" href="/" aria-label="convertitbaby.com home" data-i18n-attrs="aria-label:nav.home">
           <img class="brand-mark" src="/logo.png" alt="" aria-hidden="true">
           <span>convertitbaby.com</span>
         </a>
         <div class="nav-links">
-          <a href="/about.html">About</a>
-          <a href="https://github.com/alshakero/convertitbaby.com" rel="noopener noreferrer">Source code</a>
+          <a href="/about.html" data-i18n="nav.about">About</a>
+          <a href="https://github.com/alshakero/convertitbaby.com" rel="noopener noreferrer" data-i18n="nav.source">Source code</a>
+          <label class="language-control">
+            <span class="visually-hidden" data-i18n="language.label">Language</span>
+            <select class="language-select" data-language-select aria-label="Language" data-i18n-attrs="aria-label:language.label">
+              <option value="en">English</option>
+              <option value="ar">العربية</option>
+              <option value="pl">Polski</option>
+              <option value="de">Deutsch</option>
+            </select>
+          </label>
         </div>
       </nav>
     </header>
@@ -67,39 +76,39 @@
       <section class="converter-shell" id="convert" aria-labelledby="convert-title">
         <div class="intake-layout">
           <section class="intake-primary">
-            <p class="eyebrow">Free, private, no limits</p>
-            <h1 id="convert-title">Drop files. Pick outputs. Go.</h1>
-            <p class="lede">Add as many images, media files, PDFs, archives, or compressed files as you want. Nothing uploads, so conversion starts immediately on your device.</p>
-            <p class="format-count">99 supported formats, all handled privately on your device.</p>
+            <p class="eyebrow" data-i18n="home.eyebrow">Free, private, no limits</p>
+            <h1 id="convert-title" data-i18n="home.title">Drop files. Pick outputs. Go.</h1>
+            <p class="lede" data-i18n="home.lede">Add as many images, media files, PDFs, archives, or compressed files as you want. Nothing uploads, so conversion starts immediately on your device.</p>
+            <p class="format-count" data-i18n="home.formatCount">99 supported formats, all handled privately on your device.</p>
 
             <label class="dropzone">
               <input id="file-input" type="file" multiple accept="image/*,audio/*,video/*,application/pdf,application/zip,application/x-zip-compressed,application/vnd.rar,application/x-rar-compressed,application/x-7z-compressed,application/gzip,application/x-gzip,application/x-tar,application/x-bzip2,application/x-xz,application/zstd,application/x-brotli,application/x-lzip,application/x-lzma,application/json,application/xml,application/geo+json,application/vnd.google-earth.kml+xml,application/gpx+xml,application/toml,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.presentation,message/rfc822,application/vnd.ms-outlook,application/x-pem-file,application/pkix-cert,application/x-x509-ca-cert,text/plain,text/markdown,text/html,text/csv,text/tab-separated-values,text/calendar,text/vcard,text/vtt,image/svg+xml,image/x-icon,image/avif,image/bmp,image/tiff,image/jxl,image/vnd.adobe.photoshop,font/ttf,font/otf,font/woff,font/woff2,model/obj,model/stl,model/gltf+json,model/gltf-binary,.pdf,.heic,.heif,.avif,.bmp,.tif,.tiff,.jxl,.psd,.dng,.cr2,.nef,.arw,.mkv,.mov,.m4a,.aac,.flac,.ogg,.ts,.zip,.rar,.7z,.gz,.gzip,.tgz,.tar,.bz2,.xz,.zst,.br,.lz,.lzma,.docx,.pptx,.ods,.odt,.odp,.txt,.md,.markdown,.html,.htm,.epub,.mobi,.azw3,.json,.yaml,.yml,.toml,.ini,.properties,.plist,.csv,.tsv,.xlsx,.xml,.vcf,.ics,.env,.srt,.vtt,.geojson,.kml,.gpx,.tcx,.nmea,.fit,.svg,.ico,.ttf,.otf,.woff,.woff2,.obj,.stl,.gltf,.glb,.css,.js,.sql,.graphql,.proto,.eml,.msg,.pem,.der,.crt,.cer,.m3u,.m3u8,.pls,.cue,.gpl,.ase">
-              <span class="drop-title">Drop files here or choose files</span>
-              <span class="drop-meta">Images, PDFs, media, archives, office files, email, certificates, playlists, palettes, maps, workout files, fonts, ebooks, 3D, and code</span>
+              <span class="drop-title" data-i18n="drop.title">Drop files here or choose files</span>
+              <span class="drop-meta" data-i18n="drop.meta">Images, PDFs, media, archives, office files, email, certificates, playlists, palettes, maps, workout files, fonts, ebooks, 3D, and code</span>
             </label>
           </section>
 
           <aside class="support-panel" id="formats" aria-labelledby="formats-title">
-            <p class="eyebrow">Supported files</p>
-            <h2 id="formats-title">We detect each file and show the outputs that make sense.</h2>
+            <p class="eyebrow" data-i18n="support.eyebrow">Supported files</p>
+            <h2 id="formats-title" data-i18n="support.title">We detect each file and show the outputs that make sense.</h2>
             <div class="support-grid">
-              <article><h3>Images</h3><p>HEIC, HEIF, JPG, PNG, WebP, AVIF, BMP, TIFF, GIF stills, JXL, PSD, DNG, CR2, NEF, and ARW files are recognized.</p></article>
-              <article><h3>Media</h3><p>GIF, audio, and video formats are detected automatically. Choose from the available outputs for each file.</p></article>
-              <article><h3>Archives</h3><p>ZIP, RAR, 7Z, TAR, GZIP, TGZ, BZ2, XZ, Zstandard, Brotli, LZ, and LZMA files can be detected and repackaged.</p></article>
-              <article><h3>Documents & office</h3><p>DOCX, TXT, Markdown, HTML, PPTX, ODT, ODP, ODS, and XLSX can become readable document or table formats. PDFs can become PNG pages or compressed PDFs.</p></article>
-              <article><h3>Data & spreadsheets</h3><p>JSON, YAML, CSV, TSV, XML, XLSX, vCard, iCal, and env files can move between structured, readable formats.</p></article>
-              <article><h3>Config</h3><p>TOML, INI, properties, and plist files can convert to JSON, YAML, TOML, INI, or XML.</p></article>
-              <article><h3>Email</h3><p>EML can become TXT, HTML, or PDF. MSG files are detected and kept available for private handling.</p></article>
-              <article><h3>Certificates</h3><p>PEM, DER, CRT, and CER files can convert between certificate encodings or export a readable summary.</p></article>
-              <article><h3>Playlists</h3><p>M3U, M3U8, PLS, and CUE playlists can become JSON, CSV, or plain text.</p></article>
-              <article><h3>Palettes</h3><p>GPL, ASE, and palette images can export colors as JSON or CSS variables.</p></article>
-              <article><h3>Captions</h3><p>SRT and WebVTT subtitles can convert between caption formats or export plain transcript text.</p></article>
-              <article><h3>Map & workout data</h3><p>GeoJSON, KML, GPX, TCX, NMEA, and FIT can convert or export point data where the format can be read locally.</p></article>
-              <article><h3>Vector & icons</h3><p>SVG can export to PNG, WebP, or PDF. Images can also become ICO files.</p></article>
-              <article><h3>Ebooks</h3><p>EPUB can become HTML, TXT, or PDF. MOBI and AZW3 files are recognized when added.</p></article>
-              <article><h3>Fonts</h3><p>TTF, OTF, WOFF, and WOFF2 files are recognized and kept available for private handling.</p></article>
-              <article><h3>3D models</h3><p>OBJ and STL can convert between each other. GLTF and GLB can also convert between text and binary forms.</p></article>
-              <article><h3>Code</h3><p>CSS, JavaScript, SQL, GraphQL, and Proto files can be cleaned up for reading or minified for smaller files.</p></article>
+              <article><h3 data-i18n="support.images.title">Images</h3><p data-i18n="support.images.body">HEIC, HEIF, JPG, PNG, WebP, AVIF, BMP, TIFF, GIF stills, JXL, PSD, DNG, CR2, NEF, and ARW files are recognized.</p></article>
+              <article><h3 data-i18n="support.media.title">Media</h3><p data-i18n="support.media.body">GIF, audio, and video formats are detected automatically. Choose from the available outputs for each file.</p></article>
+              <article><h3 data-i18n="support.archives.title">Archives</h3><p data-i18n="support.archives.body">ZIP, RAR, 7Z, TAR, GZIP, TGZ, BZ2, XZ, Zstandard, Brotli, LZ, and LZMA files can be detected and repackaged.</p></article>
+              <article><h3 data-i18n="support.documents.title">Documents & office</h3><p data-i18n="support.documents.body">DOCX, TXT, Markdown, HTML, PPTX, ODT, ODP, ODS, and XLSX can become readable document or table formats. PDFs can become PNG pages or compressed PDFs.</p></article>
+              <article><h3 data-i18n="support.data.title">Data & spreadsheets</h3><p data-i18n="support.data.body">JSON, YAML, CSV, TSV, XML, XLSX, vCard, iCal, and env files can move between structured, readable formats.</p></article>
+              <article><h3 data-i18n="support.config.title">Config</h3><p data-i18n="support.config.body">TOML, INI, properties, and plist files can convert to JSON, YAML, TOML, INI, or XML.</p></article>
+              <article><h3 data-i18n="support.email.title">Email</h3><p data-i18n="support.email.body">EML can become TXT, HTML, or PDF. MSG files are detected and kept available for private handling.</p></article>
+              <article><h3 data-i18n="support.certificates.title">Certificates</h3><p data-i18n="support.certificates.body">PEM, DER, CRT, and CER files can convert between certificate encodings or export a readable summary.</p></article>
+              <article><h3 data-i18n="support.playlists.title">Playlists</h3><p data-i18n="support.playlists.body">M3U, M3U8, PLS, and CUE playlists can become JSON, CSV, or plain text.</p></article>
+              <article><h3 data-i18n="support.palettes.title">Palettes</h3><p data-i18n="support.palettes.body">GPL, ASE, and palette images can export colors as JSON or CSS variables.</p></article>
+              <article><h3 data-i18n="support.captions.title">Captions</h3><p data-i18n="support.captions.body">SRT and WebVTT subtitles can convert between caption formats or export plain transcript text.</p></article>
+              <article><h3 data-i18n="support.mapWorkout.title">Map & workout data</h3><p data-i18n="support.mapWorkout.body">GeoJSON, KML, GPX, TCX, NMEA, and FIT can convert or export point data where the format can be read locally.</p></article>
+              <article><h3 data-i18n="support.vector.title">Vector & icons</h3><p data-i18n="support.vector.body">SVG can export to PNG, WebP, or PDF. Images can also become ICO files.</p></article>
+              <article><h3 data-i18n="support.ebooks.title">Ebooks</h3><p data-i18n="support.ebooks.body">EPUB can become HTML, TXT, or PDF. MOBI and AZW3 files are recognized when added.</p></article>
+              <article><h3 data-i18n="support.fonts.title">Fonts</h3><p data-i18n="support.fonts.body">TTF, OTF, WOFF, and WOFF2 files are recognized and kept available for private handling.</p></article>
+              <article><h3 data-i18n="support.models.title">3D models</h3><p data-i18n="support.models.body">OBJ and STL can convert between each other. GLTF and GLB can also convert between text and binary forms.</p></article>
+              <article><h3 data-i18n="support.code.title">Code</h3><p data-i18n="support.code.body">CSS, JavaScript, SQL, GraphQL, and Proto files can be cleaned up for reading or minified for smaller files.</p></article>
             </div>
           </aside>
         </div>
@@ -107,25 +116,25 @@
         <section class="queue-panel" aria-labelledby="queue-title">
           <div class="queue-header">
             <div>
-              <p class="eyebrow">File queue</p>
-              <h2 id="queue-title">Choose outputs for each file</h2>
+              <p class="eyebrow" data-i18n="queue.eyebrow">File queue</p>
+              <h2 id="queue-title" data-i18n="queue.title">Choose outputs for each file</h2>
             </div>
             <div class="queue-actions">
-              <button class="button secondary" type="button" id="clear-button" disabled>Clear</button>
-              <button class="button primary" type="button" id="go-button" disabled>Go</button>
+              <button class="button secondary" type="button" id="clear-button" disabled data-i18n="queue.clear">Clear</button>
+              <button class="button primary" type="button" id="go-button" disabled data-i18n="queue.go">Go</button>
             </div>
           </div>
 
           <div class="progress" hidden>
             <span class="progress-bar"></span>
           </div>
-          <p class="status" aria-live="polite">Drop files to begin.</p>
-          <p class="empty-queue">Your files will appear here with an output menu for each one.</p>
+          <p class="status" aria-live="polite" data-i18n="status.dropFiles">Drop files to begin.</p>
+          <p class="empty-queue" data-i18n="queue.empty">Your files will appear here with an output menu for each one.</p>
           <ul class="file-queue" aria-live="polite"></ul>
         </section>
 
-        <section class="results" aria-label="Batch download">
-          <button class="button secondary" type="button" id="download-all-button" disabled>Download all</button>
+        <section class="results" aria-label="Batch download" data-i18n-attrs="aria-label:results.label">
+          <button class="button secondary" type="button" id="download-all-button" disabled data-i18n="results.downloadAll">Download all</button>
         </section>
       </section>
     </main>
@@ -576,9 +585,9 @@
     </div>
 
     <footer class="footer">
-      <p>convertitbaby.com keeps file, archive, and compression conversion private. Files are never uploaded anyways.</p>
-      <p>Made in Poland with ❤️</p>
-      <p><a href="https://github.com/alshakero/convertitbaby.com" rel="noopener noreferrer">View the source on GitHub</a></p>
+      <p data-i18n="footer.privacy">convertitbaby.com keeps file, archive, and compression conversion private. Files are never uploaded anyways.</p>
+      <p data-i18n="footer.madeInPoland">Made in Poland with ❤️</p>
+      <p><a href="https://github.com/alshakero/convertitbaby.com" rel="noopener noreferrer" data-i18n="footer.source">View the source on GitHub</a></p>
     </footer>
 
     <script type="module" src="src/app.js"></script>

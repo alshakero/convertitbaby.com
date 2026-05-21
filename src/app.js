@@ -1,10 +1,12 @@
 import { convertQueueItem } from "./converters/index.js";
+import { getOutputOptions, getSelectedOutput, inferFileKind } from "./formats.js";
 import {
-  fileKindLabel,
-  getOutputOptions,
-  getSelectedOutput,
-  inferFileKind,
-} from "./formats.js";
+  formatFileKindLabel,
+  formatOutputLabel,
+  initI18n,
+  itemStatusLabel,
+  t,
+} from "./i18n.js";
 import { createZip } from "./lib/archive.js";
 import { createDownload } from "./lib/downloads.js";
 import { setObjectUrlTracker } from "./lib/runtime.js";
@@ -25,8 +27,15 @@ const state = {
   items: [],
   urls: [],
   isConverting: false,
+  status: { key: "status.dropFiles", params: {} },
 };
 
+initI18n({
+  onLanguageChange: () => {
+    renderQueue();
+    renderStatus();
+  },
+});
 loadConversionEvents();
 setObjectUrlTracker((url) => state.urls.push(url));
 
@@ -70,7 +79,7 @@ function addFiles(fileList) {
   const files = [...(fileList || [])];
   if (!files.length) {
     fileInput.value = "";
-    setStatus("No files were selected. Try dragging the file in instead.");
+    setStatus("status.noFilesSelected");
     return;
   }
 
@@ -80,16 +89,21 @@ function addFiles(fileList) {
   } catch (error) {
     console.error(error);
     fileInput.value = "";
-    setStatus(error?.message || "Could not add that file.");
+    if (error?.message) {
+      setStatusText(error.message);
+    } else {
+      setStatus("status.couldNotAdd");
+    }
     return;
   }
 
   state.items.push(...newItems);
   fileInput.value = "";
   renderQueue();
-  setStatus(
-    `${newItems.length} file${newItems.length === 1 ? "" : "s"} added. ${state.items.length} file${state.items.length === 1 ? "" : "s"} in queue.`,
-  );
+  setStatus("status.filesAdded", {
+    added: newItems.length,
+    total: state.items.length,
+  });
   queuePanel.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -102,11 +116,8 @@ function createQueueItem(file) {
     file,
     kind,
     output: defaultOutput?.value || outputs[0]?.value || "",
-    status: defaultOutput
-      ? "Ready"
-      : outputs.length
-        ? "Unavailable"
-        : "Unsupported",
+    status: defaultOutput ? "ready" : outputs.length ? "unavailable" : "unsupported",
+    errorMessage: "",
     downloads: [],
   };
 }
@@ -131,37 +142,38 @@ function renderQueue() {
     const name = document.createElement("strong");
     name.textContent = item.file.name;
     const meta = document.createElement("span");
-    meta.textContent = `${fileKindLabel(item.kind)} · ${formatBytes(item.file.size)}`;
+    meta.textContent = `${formatFileKindLabel(item.kind)} · ${formatBytes(item.file.size)}`;
     info.append(name, meta);
 
     const select = document.createElement("select");
     select.className = "output-select";
     select.id = `output-${item.id}`;
     select.name = `output-${item.id}`;
-    select.ariaLabel = `Output format for ${item.file.name}`;
+    select.ariaLabel = t("queue.outputFor", { filename: item.file.name });
     select.disabled = outputs.length === 0;
     outputs.forEach((output) => {
-      const option = new Option(output.label, output.value);
+      const option = new Option(formatOutputLabel(output.label), output.value);
       option.selected = output.value === item.output;
       option.disabled = output.disabled;
       select.append(option);
     });
     select.addEventListener("change", () => {
       item.output = select.value;
-      item.status = "Ready";
+      item.status = "ready";
+      item.errorMessage = "";
       revokeItemDownloads(item);
       renderQueue();
     });
 
     const status = document.createElement("div");
     status.className = `item-status ${statusClass(item.status)}`;
-    status.textContent = item.status;
+    status.textContent = item.errorMessage || itemStatusLabel(item.status);
 
     const remove = document.createElement("button");
     remove.className = "icon-button";
     remove.type = "button";
-    remove.ariaLabel = `Remove ${item.file.name}`;
-    remove.textContent = "Remove";
+    remove.ariaLabel = t("queue.removeFile", { filename: item.file.name });
+    remove.textContent = t("queue.remove");
     remove.addEventListener("click", () => {
       state.items = state.items.filter((candidate) => candidate.id !== item.id);
       revokeItemDownloads(item);
@@ -176,8 +188,8 @@ function renderQueue() {
 
     const supportNote = document.createElement("p");
     supportNote.className = "support-note";
-    supportNote.hidden = !hasDisabledOutputs || item.status === "Done";
-    supportNote.textContent = "Some outputs are unavailable for this file.";
+    supportNote.hidden = !hasDisabledOutputs || item.status === "done";
+    supportNote.textContent = t("queue.supportNote");
 
     row.append(info, select, status, remove, supportNote, downloads);
     queueEl.append(row);
@@ -190,15 +202,13 @@ async function convertAll() {
   clearDownloads();
   const convertible = state.items.filter((item) => getSelectedOutput(item));
   if (!convertible.length) {
-    setStatus("Add supported files first.");
+    setStatus("status.addSupportedFiles");
     return;
   }
 
   setConversionActive(true);
   setProgress(0);
-  setStatus(
-    `Converting ${convertible.length} file${convertible.length === 1 ? "" : "s"}...`,
-  );
+  setStatus("status.converting", { count: convertible.length });
   const batchStartedAt = performance.now();
   let completed = 0;
 
@@ -207,7 +217,8 @@ async function convertAll() {
 
     const results = await Promise.allSettled(
       convertible.map(async (item) => {
-        item.status = "Converting";
+        item.status = "converting";
+        item.errorMessage = "";
         revokeItemDownloads(item);
         renderQueue();
         const output = getSelectedOutput(item);
@@ -218,7 +229,7 @@ async function convertAll() {
           item.downloads = downloads.map((download) =>
             createDownload(download.blob, download.filename, download.mimeType),
           );
-          item.status = "Done";
+          item.status = "done";
           completed += 1;
           conversionEvents.trackConversionSuccess({
             file: item.file,
@@ -244,7 +255,8 @@ async function convertAll() {
     results.forEach((result, index) => {
       if (result.status === "rejected") {
         const item = convertible[index];
-        item.status = result.reason?.message || "Failed";
+        item.status = "failed";
+        item.errorMessage = result.reason?.message || "";
       }
     });
 
@@ -257,11 +269,14 @@ async function convertAll() {
       durationMs: performance.now() - batchStartedAt,
     });
     setProgress(1);
-    setStatus(
-      failed
-        ? `${convertible.length - failed} done, ${failed} failed.`
-        : `Converted ${convertible.length} file${convertible.length === 1 ? "" : "s"}.`,
-    );
+    if (failed) {
+      setStatus("status.doneFailed", {
+        done: convertible.length - failed,
+        failed,
+      });
+    } else {
+      setStatus("status.converted", { count: convertible.length });
+    }
   } finally {
     setConversionActive(false);
     renderQueue();
@@ -273,14 +288,12 @@ async function downloadAll() {
   if (!downloads.length) return;
 
   downloadAllButton.disabled = true;
-  setStatus(
-    `Preparing ${downloads.length} file${downloads.length === 1 ? "" : "s"} for download...`,
-  );
+  setStatus("status.preparingDownload", { count: downloads.length });
 
   try {
     if (downloads.length === 1) {
       triggerDownload(downloads[0]);
-      setStatus(`Downloaded ${downloads[0].filename}.`);
+      setStatus("status.downloaded", { filename: downloads[0].filename });
       return;
     }
 
@@ -291,12 +304,14 @@ async function downloadAll() {
       url,
       filename: `convertitbaby-${new Date().toISOString().slice(0, 10)}.zip`,
     });
-    setStatus(
-      `Downloaded ${downloads.length} file${downloads.length === 1 ? "" : "s"} as a ZIP.`,
-    );
+    setStatus("status.downloadedZip", { count: downloads.length });
   } catch (error) {
     console.error(error);
-    setStatus(error?.message || "Could not prepare the batch download.");
+    if (error?.message) {
+      setStatusText(error.message);
+    } else {
+      setStatus("status.couldNotPrepareDownload");
+    }
   } finally {
     downloadAllButton.disabled = getAllDownloads().length === 0;
   }
@@ -347,7 +362,7 @@ function clearQueue() {
   clearDownloads();
   setProgress(null);
   renderQueue();
-  setStatus("Drop files to begin.");
+  setStatus("status.dropFiles");
 }
 
 function clearDownloads() {
@@ -358,8 +373,20 @@ function getAllDownloads() {
   return state.items.flatMap((item) => item.downloads);
 }
 
-function setStatus(message) {
-  statusEl.textContent = message;
+function setStatus(key, params = {}) {
+  state.status = { key, params };
+  renderStatus();
+}
+
+function setStatusText(message) {
+  state.status = { message };
+  renderStatus();
+}
+
+function renderStatus() {
+  statusEl.textContent = state.status.key
+    ? t(state.status.key, state.status.params)
+    : state.status.message;
 }
 
 function setConversionActive(isConverting) {
