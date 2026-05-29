@@ -26,8 +26,8 @@ const COMPRESSED_PDF_MAX_SCALE = 2;
 const COMPRESSED_PDF_JPEG_QUALITY = 0.68;
 const MIDI_ATTACK_SECONDS = 0.006;
 const MIDI_DEFAULT_TEMPO_MICROSECONDS = 500000;
-const MIDI_MAX_DURATION_SECONDS = 300;
 const MIDI_MIN_NOTE_SECONDS = 0.03;
+const MIDI_MP3_CHUNK_SAMPLES = 1152 * 64;
 const MIDI_RELEASE_SECONDS = 0.08;
 const MIDI_SAMPLE_RATE = 44100;
 
@@ -208,8 +208,7 @@ export async function convertAudioTrackToMp3(file) {
 export async function convertMidiFileToMp3(file) {
   const midi = parseMidiFile(new Uint8Array(await file.arrayBuffer()));
   const notes = midiNotesToTimedNotes(midi);
-  const audioBuffer = renderMidiToAudioBuffer(notes);
-  const blob = await encodeMp3(audioBuffer);
+  const blob = await encodeMidiNotesToMp3(notes);
   return {
     blob,
     filename: rename(file.name, "mp3"),
@@ -532,47 +531,103 @@ function midiEventPriority(event) {
   return event.type === "noteOff" ? 0 : 1;
 }
 
-function renderMidiToAudioBuffer(notes) {
+async function encodeMidiNotesToMp3(notes) {
+  const Mp3Encoder = await getMp3EncoderCtor();
+  if (!Mp3Encoder) {
+    throw new Error("MP3 is not available for this file.");
+  }
+
   const duration = notes.reduce(
     (max, note) => Math.max(max, note.endSeconds),
     0,
   );
-  if (duration > MIDI_MAX_DURATION_SECONDS) {
-    throw new Error(
-      "MIDI files over five minutes are not available for MP3 export.",
-    );
-  }
-
-  const length = Math.max(
+  const totalSamples = Math.max(
     1,
     Math.ceil((duration + MIDI_RELEASE_SECONDS + 0.2) * MIDI_SAMPLE_RATE),
   );
-  const channels = [new Float32Array(length), new Float32Array(length)];
-  for (const note of notes) {
-    renderMidiNote(note, channels);
-  }
-  normalizeAudioChannels(channels);
 
-  return {
-    getChannelData: (index) => channels[index] || channels[0],
-    length,
-    numberOfChannels: channels.length,
-    sampleRate: MIDI_SAMPLE_RATE,
-  };
+  const encoder = new Mp3Encoder(2, MIDI_SAMPLE_RATE, 128);
+  const chunks = [];
+  const frameSize = 1152;
+  const activeNotes = [];
+  let nextNoteIndex = 0;
+
+  for (
+    let chunkStart = 0;
+    chunkStart < totalSamples;
+    chunkStart += MIDI_MP3_CHUNK_SAMPLES
+  ) {
+    const chunkEnd = Math.min(
+      totalSamples,
+      chunkStart + MIDI_MP3_CHUNK_SAMPLES,
+    );
+    const chunkLength = chunkEnd - chunkStart;
+    const chunkStartSeconds = chunkStart / MIDI_SAMPLE_RATE;
+    const chunkEndSeconds = chunkEnd / MIDI_SAMPLE_RATE;
+
+    while (
+      nextNoteIndex < notes.length &&
+      notes[nextNoteIndex].startSeconds < chunkEndSeconds
+    ) {
+      activeNotes.push(notes[nextNoteIndex]);
+      nextNoteIndex += 1;
+    }
+
+    for (let index = activeNotes.length - 1; index >= 0; index -= 1) {
+      if (
+        activeNotes[index].endSeconds + MIDI_RELEASE_SECONDS <=
+        chunkStartSeconds
+      ) {
+        activeNotes.splice(index, 1);
+      }
+    }
+
+    const channels = renderMidiChunk(activeNotes, chunkStart, chunkLength);
+    normalizeAudioChannels(channels);
+    const left = floatToInt16(channels[0]);
+    const right = floatToInt16(channels[1]);
+
+    for (let offset = 0; offset < left.length; offset += frameSize) {
+      const mp3Buffer = encoder.encodeBuffer(
+        left.subarray(offset, offset + frameSize),
+        right.subarray(offset, offset + frameSize),
+      );
+      if (mp3Buffer.length) chunks.push(mp3Buffer);
+    }
+
+    await wait(0);
+  }
+
+  const finalBuffer = encoder.flush();
+  if (finalBuffer.length) chunks.push(finalBuffer);
+  return new Blob(chunks, { type: "audio/mpeg" });
 }
 
-function renderMidiNote(note, [left, right]) {
+function renderMidiChunk(notes, chunkStart, chunkLength) {
+  const channels = [
+    new Float32Array(chunkLength),
+    new Float32Array(chunkLength),
+  ];
+  for (const note of notes) {
+    renderMidiNote(note, channels, chunkStart);
+  }
+  return channels;
+}
+
+function renderMidiNote(note, [left, right], sampleOffset = 0) {
+  const noteStartIndex = Math.floor(note.startSeconds * MIDI_SAMPLE_RATE);
+  const releaseStartIndex = Math.max(
+    noteStartIndex + 1,
+    Math.floor(note.endSeconds * MIDI_SAMPLE_RATE),
+  );
   const startIndex = Math.max(
     0,
-    Math.floor(note.startSeconds * MIDI_SAMPLE_RATE),
-  );
-  const releaseStartIndex = Math.max(
-    startIndex + 1,
-    Math.floor(note.endSeconds * MIDI_SAMPLE_RATE),
+    noteStartIndex - sampleOffset,
   );
   const endIndex = Math.min(
     left.length,
-    Math.ceil((note.endSeconds + MIDI_RELEASE_SECONDS) * MIDI_SAMPLE_RATE),
+    Math.ceil((note.endSeconds + MIDI_RELEASE_SECONDS) * MIDI_SAMPLE_RATE) -
+      sampleOffset,
   );
   const attackSamples = Math.max(
     1,
@@ -590,12 +645,13 @@ function renderMidiNote(note, [left, right]) {
   const rightGain = Math.sin(((pan + 1) * Math.PI) / 4);
 
   for (let index = startIndex; index < endIndex; index += 1) {
-    const elapsedSamples = index - startIndex;
+    const absoluteIndex = sampleOffset + index;
+    const elapsedSamples = absoluteIndex - noteStartIndex;
     const elapsedSeconds = elapsedSamples / MIDI_SAMPLE_RATE;
     const envelope =
-      index < releaseStartIndex
+      absoluteIndex < releaseStartIndex
         ? Math.min(1, (elapsedSamples + 1) / attackSamples)
-        : Math.max(0, 1 - (index - releaseStartIndex) / releaseSamples);
+        : Math.max(0, 1 - (absoluteIndex - releaseStartIndex) / releaseSamples);
     const phase = 2 * Math.PI * frequency * elapsedSeconds;
     const sample =
       (Math.sin(phase) +
