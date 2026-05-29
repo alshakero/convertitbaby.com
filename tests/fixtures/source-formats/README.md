@@ -18,6 +18,7 @@ This directory contains one compact fixture for every source extension the app c
 - `audio/flac`
 - `audio/ogg`
 - `audio/m4a`
+- `audio/midi`
 - `archive/zip`
 - `archive/rar`
 - `archive/7z`
@@ -111,6 +112,7 @@ The fixtures are intentionally tiny so the full conversion matrix can run in a r
 - HEIC and HEIF were derived locally from the PNG seed with ImageMagick.
 - AVIF, BMP, and TIFF were derived locally from the PNG seed with ImageMagick.
 - AAC, FLAC, Ogg, and M4A were derived locally from the MP3 seed with FFmpeg.
+- MIDI is a compact Standard MIDI file generated locally for the conversion matrix.
 - MOV, MKV, and TS were derived locally from the MP4 and MP3 seeds with FFmpeg.
 - Archive fixtures are tiny synthetic files used to verify extension recognition and local container generation.
 - DOCX, PPTX, ODT, ODP, ODS, EPUB, GLB, OBJ, STL, SVG, document, data, email, certificate, playlist, palette, workout, and code fixtures are compact valid files generated locally for the conversion matrix.

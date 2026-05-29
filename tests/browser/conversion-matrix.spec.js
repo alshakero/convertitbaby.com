@@ -51,6 +51,7 @@ const outputsByKind = {
     { label: "FLAC", value: "flac", extension: ".flac" },
     { label: "Ogg", value: "ogg", extension: ".ogg" },
   ],
+  midi: [{ label: "MP3", value: "mp3", extension: ".mp3" }],
   archive: [
     { label: "ZIP archive", value: "zip", extension: ".zip" },
     { label: "TAR archive", value: "tar", extension: ".tar" },

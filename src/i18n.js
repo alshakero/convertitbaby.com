@@ -33,6 +33,7 @@ const fileKindKeys = {
   pdf: "fileKind.pdf",
   video: "fileKind.video",
   audio: "fileKind.audio",
+  midi: "fileKind.midi",
   unknown: "fileKind.unknown",
 };
 
@@ -76,7 +77,7 @@ const translations = {
     "home.lede":
       "Add as many images, media files, PDFs, archives, or compressed files as you want. Nothing uploads, so conversion starts immediately on your device.",
     "home.formatCount":
-      "99 supported formats, all handled privately on your device.",
+      "100 supported formats, all handled privately on your device.",
     "drop.title": "Drop files here or choose files",
     "drop.meta":
       "Images, PDFs, media, archives, office files, email, certificates, playlists, palettes, maps, workout files, fonts, ebooks, 3D, and code",
@@ -88,7 +89,7 @@ const translations = {
       "HEIC, HEIF, JPG, PNG, WebP, AVIF, BMP, TIFF, GIF stills, JXL, PSD, DNG, CR2, NEF, and ARW files are recognized.",
     "support.media.title": "Media",
     "support.media.body":
-      "GIF, audio, and video formats are detected automatically. Choose from the available outputs for each file.",
+      "GIF, audio, video, and MIDI formats are detected automatically. Choose from the available outputs for each file.",
     "support.archives.title": "Archives",
     "support.archives.body":
       "ZIP, RAR, 7Z, TAR, GZIP, TGZ, BZ2, XZ, Zstandard, Brotli, LZ, and LZMA files can be detected and repackaged.",
@@ -206,6 +207,7 @@ const translations = {
     "fileKind.pdf": "PDF",
     "fileKind.video": "Video",
     "fileKind.audio": "Audio",
+    "fileKind.midi": "MIDI",
     "fileKind.unknown": "Unsupported",
     "fileKind.file": "File",
     "output.webmVideo": "WebM video",
@@ -240,7 +242,7 @@ const translations = {
     "home.title": "أفلت الملفات. اختر الصيغ. وانطلق.",
     "home.lede":
       "أضف أي عدد تريده من الصور أو ملفات الوسائط أو ملفات PDF أو الأرشيفات أو الملفات المضغوطة. لا يتم رفع أي شيء، لذلك يبدأ التحويل فوراً على جهازك.",
-    "home.formatCount": "99 صيغة مدعومة، وكلها تعالج بخصوصية على جهازك.",
+    "home.formatCount": "100 صيغة مدعومة، وكلها تعالج بخصوصية على جهازك.",
     "drop.title": "أفلت الملفات هنا أو اختر ملفات",
     "drop.meta":
       "صور، PDF، وسائط، أرشيفات، ملفات مكتبية، بريد إلكتروني، شهادات، قوائم تشغيل، لوحات ألوان، خرائط، ملفات تمارين، خطوط، كتب إلكترونية، نماذج ثلاثية الأبعاد، وشيفرة",
@@ -251,7 +253,7 @@ const translations = {
       "يتم التعرف على ملفات HEIC وHEIF وJPG وPNG وWebP وAVIF وBMP وTIFF ولقطات GIF وJXL وPSD وDNG وCR2 وNEF وARW.",
     "support.media.title": "الوسائط",
     "support.media.body":
-      "يتم اكتشاف صيغ GIF والصوت والفيديو تلقائياً. اختر من المخرجات المتاحة لكل ملف.",
+      "يتم اكتشاف صيغ GIF والصوت والفيديو وMIDI تلقائياً. اختر من المخرجات المتاحة لكل ملف.",
     "support.archives.title": "الأرشيفات",
     "support.archives.body":
       "يمكن اكتشاف ملفات ZIP وRAR و7Z وTAR وGZIP وTGZ وBZ2 وXZ وZstandard وBrotli وLZ وLZMA وإعادة حزمها.",
@@ -367,6 +369,7 @@ const translations = {
     "fileKind.pdf": "PDF",
     "fileKind.video": "فيديو",
     "fileKind.audio": "صوت",
+    "fileKind.midi": "MIDI",
     "fileKind.unknown": "غير مدعوم",
     "fileKind.file": "ملف",
     "output.webmVideo": "فيديو WebM",
@@ -403,7 +406,7 @@ const translations = {
     "home.lede":
       "Dodaj dowolną liczbę obrazów, plików multimedialnych, PDF-ów, archiwów lub plików skompresowanych. Nic nie jest wysyłane, więc konwersja zaczyna się od razu na Twoim urządzeniu.",
     "home.formatCount":
-      "99 obsługiwanych formatów, wszystkie przetwarzane prywatnie na Twoim urządzeniu.",
+      "100 obsługiwanych formatów, wszystkie przetwarzane prywatnie na Twoim urządzeniu.",
     "drop.title": "Upuść pliki tutaj albo wybierz pliki",
     "drop.meta":
       "Obrazy, PDF-y, multimedia, archiwa, pliki biurowe, e-mail, certyfikaty, playlisty, palety, mapy, treningi, fonty, ebooki, 3D i kod",
@@ -415,7 +418,7 @@ const translations = {
       "Rozpoznawane są pliki HEIC, HEIF, JPG, PNG, WebP, AVIF, BMP, TIFF, klatki GIF, JXL, PSD, DNG, CR2, NEF i ARW.",
     "support.media.title": "Multimedia",
     "support.media.body":
-      "Formaty GIF, audio i wideo są wykrywane automatycznie. Wybierz dostępny format wyjściowy dla każdego pliku.",
+      "Formaty GIF, audio, wideo i MIDI są wykrywane automatycznie. Wybierz dostępny format wyjściowy dla każdego pliku.",
     "support.archives.title": "Archiwa",
     "support.archives.body":
       "Pliki ZIP, RAR, 7Z, TAR, GZIP, TGZ, BZ2, XZ, Zstandard, Brotli, LZ i LZMA mogą być wykrywane i przepakowywane.",
@@ -533,6 +536,7 @@ const translations = {
     "fileKind.pdf": "PDF",
     "fileKind.video": "Wideo",
     "fileKind.audio": "Audio",
+    "fileKind.midi": "MIDI",
     "fileKind.unknown": "Nieobsługiwane",
     "fileKind.file": "Plik",
     "output.webmVideo": "Wideo WebM",
@@ -569,7 +573,7 @@ const translations = {
     "home.lede":
       "Füge so viele Bilder, Mediendateien, PDFs, Archive oder komprimierte Dateien hinzu, wie du möchtest. Nichts wird hochgeladen, daher beginnt die Konvertierung sofort auf deinem Gerät.",
     "home.formatCount":
-      "99 unterstützte Formate, alle privat auf deinem Gerät verarbeitet.",
+      "100 unterstützte Formate, alle privat auf deinem Gerät verarbeitet.",
     "drop.title": "Dateien hier ablegen oder auswählen",
     "drop.meta":
       "Bilder, PDFs, Medien, Archive, Office-Dateien, E-Mail, Zertifikate, Playlists, Paletten, Karten, Trainingsdateien, Schriften, E-Books, 3D und Code",
@@ -581,7 +585,7 @@ const translations = {
       "HEIC, HEIF, JPG, PNG, WebP, AVIF, BMP, TIFF, GIF-Standbilder, JXL, PSD, DNG, CR2, NEF und ARW werden erkannt.",
     "support.media.title": "Medien",
     "support.media.body":
-      "GIF-, Audio- und Videoformate werden automatisch erkannt. Wähle die verfügbaren Ausgaben für jede Datei.",
+      "GIF-, Audio-, Video- und MIDI-Formate werden automatisch erkannt. Wähle die verfügbaren Ausgaben für jede Datei.",
     "support.archives.title": "Archive",
     "support.archives.body":
       "ZIP, RAR, 7Z, TAR, GZIP, TGZ, BZ2, XZ, Zstandard, Brotli, LZ und LZMA können erkannt und neu gepackt werden.",
@@ -700,6 +704,7 @@ const translations = {
     "fileKind.pdf": "PDF",
     "fileKind.video": "Video",
     "fileKind.audio": "Audio",
+    "fileKind.midi": "MIDI",
     "fileKind.unknown": "Nicht unterstützt",
     "fileKind.file": "Datei",
     "output.webmVideo": "WebM-Video",

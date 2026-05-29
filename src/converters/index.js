@@ -10,6 +10,7 @@ import {
   convertImageFile,
   convertImageToIco,
   convertMediaFile,
+  convertMidiFileToMp3,
   compressPdfFile,
   convertSingleImageToPdf,
   convertSvgToPdf,
@@ -64,6 +65,8 @@ export async function convertQueueItem(file, output) {
         return [await convertAudioFileToWav(file)];
       }
       return [await convertMediaFile(file, output.value)];
+    case "midi":
+      return [await convertMidiFileToMp3(file)];
     case "archive":
       return [await convertArchiveFile(file, output.value)];
     case "document":

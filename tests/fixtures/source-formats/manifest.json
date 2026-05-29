@@ -79,6 +79,12 @@
       "source": "Derived from https://samplelib.com/sample-mp3.html"
     },
     {
+      "id": "midi",
+      "path": "audio/midi/sample.mid",
+      "kind": "midi",
+      "source": "Synthetic compact Standard MIDI fixture"
+    },
+    {
       "id": "mp4",
       "path": "video/mp4/sample.mp4",
       "kind": "video",

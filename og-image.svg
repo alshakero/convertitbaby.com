@@ -36,7 +36,7 @@
 
   <g transform="translate(834 194)">
     <rect width="210" height="236" rx="8" fill="url(#drop)" stroke="#8fa39a" stroke-width="3" stroke-dasharray="12 12"/>
-    <text x="105" y="82" text-anchor="middle" fill="#101820" font-family="Arial, Helvetica, sans-serif" font-size="56" font-weight="900">99</text>
+    <text x="105" y="82" text-anchor="middle" fill="#101820" font-family="Arial, Helvetica, sans-serif" font-size="56" font-weight="900">100</text>
     <text x="105" y="122" text-anchor="middle" fill="#285c57" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="900">formats</text>
     <rect x="34" y="158" width="142" height="50" rx="8" fill="#101820"/>
     <text x="105" y="191" text-anchor="middle" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="900">No upload</text>

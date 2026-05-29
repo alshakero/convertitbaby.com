@@ -43,6 +43,7 @@ export const OUTPUTS = {
     { label: "FLAC", value: "flac", kind: "media" },
     { label: "Ogg", value: "ogg", kind: "media" },
   ],
+  midi: [{ label: "MP3", value: "mp3", kind: "midi" }],
   archive: [
     { label: "ZIP archive", value: "zip", kind: "archive" },
     { label: "TAR archive", value: "tar", kind: "archive" },
@@ -455,6 +456,8 @@ export function mimeForExtension(ext) {
       flac: "audio/flac",
       ogg: "audio/ogg",
       m4a: "audio/mp4",
+      mid: "audio/midi",
+      midi: "audio/midi",
       mp4: "video/mp4",
       mov: "video/quicktime",
       mkv: "video/x-matroska",
@@ -517,6 +520,8 @@ export function inferFileKind(file) {
     ["mov", "mkv", "webm", "ts"].includes(ext)
   )
     return "video";
+  if (["mid", "midi"].includes(ext) || /midi/i.test(file.type))
+    return "midi";
   if (
     file.type.startsWith("audio/") ||
     ["mp3", "wav", "aac", "flac", "ogg", "m4a"].includes(ext)
@@ -552,6 +557,7 @@ export function fileKindLabel(kind) {
       pdf: "PDF",
       video: "Video",
       audio: "Audio",
+      midi: "MIDI",
       unknown: "Unsupported",
     }[kind] || "File"
   );
