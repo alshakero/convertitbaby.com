@@ -295,10 +295,13 @@ for (const fixture of manifest.sources) {
       await expect(row.locator(".support-note")).toBeHidden();
       await expect(page.locator(".status")).toContainText("Converted 1 file");
       await expect(page.locator(".status")).not.toContainText("parallel");
-      await expect(page.locator(".results > *")).toHaveCount(1);
-      await expect(
-        page.locator(".results > #download-all-button"),
-      ).toBeEnabled();
+      await expect(page.locator(".action-bar")).toBeVisible();
+      await expect(page.locator(".action-summary")).toContainText(
+        "1 converted file ready",
+      );
+      await expect(page.locator("#go-button")).toBeHidden();
+      await expect(page.locator("#download-all-button")).toBeVisible();
+      await expect(page.locator("#download-all-button")).toBeEnabled();
 
       const links = row.locator(".item-downloads .download");
       await expect(links.first()).toBeVisible();

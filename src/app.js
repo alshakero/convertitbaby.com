@@ -44,6 +44,8 @@ const dropzone = document.querySelector(".dropzone");
 const queuePanel = document.querySelector(".queue-panel");
 const queueEl = document.querySelector(".file-queue");
 const emptyQueueEl = document.querySelector(".empty-queue");
+const actionBar = document.querySelector(".action-bar");
+const actionSummary = document.querySelector("[data-action-summary]");
 const goButton = document.querySelector("#go-button");
 const clearButton = document.querySelector("#clear-button");
 const downloadAllButton = document.querySelector("#download-all-button");
@@ -125,10 +127,23 @@ function createQueueItem(file) {
 function renderQueue() {
   queueEl.replaceChildren();
   emptyQueueEl.hidden = state.items.length > 0;
-  goButton.disabled =
-    state.isConverting || !state.items.some((item) => getSelectedOutput(item));
+  const downloads = getAllDownloads();
+  const hasConvertibleItems = state.items.some((item) => getSelectedOutput(item));
+  const hasPendingConvertibleItems = state.items.some(
+    (item) => getSelectedOutput(item) && item.status !== "done",
+  );
+  const showDownloadAction =
+    downloads.length > 0 && !hasPendingConvertibleItems && !state.isConverting;
+  actionBar.hidden = state.items.length === 0;
+  actionSummary.textContent = actionSummaryLabel({
+    downloads,
+    hasPendingConvertibleItems,
+  });
+  goButton.hidden = showDownloadAction;
+  goButton.disabled = state.isConverting || !hasConvertibleItems;
   clearButton.disabled = state.items.length === 0;
-  downloadAllButton.disabled = getAllDownloads().length === 0;
+  downloadAllButton.hidden = !showDownloadAction;
+  downloadAllButton.disabled = downloads.length === 0;
 
   state.items.forEach((item) => {
     const outputs = getOutputOptions(item);
@@ -194,6 +209,16 @@ function renderQueue() {
     row.append(info, select, status, remove, supportNote, downloads);
     queueEl.append(row);
   });
+}
+
+function actionSummaryLabel({ downloads, hasPendingConvertibleItems }) {
+  if (state.isConverting) {
+    return t("action.converting", { count: state.items.length });
+  }
+  if (downloads.length > 0 && !hasPendingConvertibleItems) {
+    return t("action.converted", { count: downloads.length });
+  }
+  return t("action.ready", { count: state.items.length });
 }
 
 async function convertAll() {
@@ -313,7 +338,7 @@ async function downloadAll() {
       setStatus("status.couldNotPrepareDownload");
     }
   } finally {
-    downloadAllButton.disabled = getAllDownloads().length === 0;
+    renderQueue();
   }
 }
 
