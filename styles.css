@@ -302,12 +302,38 @@ h1 {
   font: inherit;
   font-weight: 900;
   cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
 }
 
 .button.primary {
   background: var(--ink);
   color: white;
   box-shadow: 0 12px 30px rgba(16, 24, 32, 0.18);
+}
+
+#go-button {
+  border-color: var(--coral);
+  background: var(--coral);
+  color: white;
+  box-shadow: 0 14px 34px rgba(216, 91, 74, 0.28);
+}
+
+#go-button:not(:disabled):hover {
+  border-color: #c94f40;
+  background: #c94f40;
+  box-shadow: 0 16px 38px rgba(216, 91, 74, 0.34);
+  transform: translateY(-1px);
+}
+
+#go-button:not(:disabled):active {
+  border-color: #b94437;
+  background: #b94437;
+  box-shadow: 0 8px 22px rgba(216, 91, 74, 0.24);
+  transform: translateY(0);
 }
 
 .button.secondary {
